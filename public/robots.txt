@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard/
+Disallow: /admin/
+Disallow: /account/
+Disallow: /validator/
+Disallow: /auth/
+Disallow: /checkout
+
+Sitemap: https://billetevent.com/sitemap.xml

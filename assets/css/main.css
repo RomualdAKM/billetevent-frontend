@@ -1,0 +1,106 @@
+@import "tailwindcss";
+
+/* ============================================================
+   BilletEvent Design System — Tokens
+   ============================================================
+   Philosophie : Dashboard métier de billetterie premium
+   Palette : Orange accent, tons neutres chauds
+   Typographie : Serif titres/montants, Sans-serif corps
+   ============================================================ */
+
+@theme {
+  /* --- Typography ----------------------------------------- */
+  --font-sans: 'DM Sans', system-ui, sans-serif;
+  --font-serif: 'DM Serif Display', Georgia, serif;
+
+  /* --- Backgrounds --------------------------------------- */
+  --color-bg-primary: #F4F6FA;
+  --color-bg-tickets: #F0F2F8;
+
+  /* --- Surfaces ------------------------------------------ */
+  --color-surface: #FFFFFF;
+  --color-surface-2: #EEF1F8;
+  --color-surface-3: #E2E6F0;
+
+  /* --- Borders ------------------------------------------- */
+  --color-border-light: #E2E6F0;
+  --color-border-medium: #C8CEDF;
+
+  /* --- Text ---------------------------------------------- */
+  --color-text-primary: #1B2B5E;
+  --color-text-secondary: #4A5A8A;
+  --color-text-tertiary: #8A93B2;
+  --color-ink2: #2E3F7A;
+  --color-muted: #C8CEDF;
+
+  /* --- Brand : Blue -------------------------------------- */
+  --color-blue-main: #1B2B5E;
+  --color-blue-light: #2563EB;
+  --color-blue-dim: rgba(27, 43, 94, 0.06);
+
+  /* --- Brand : Orange (accent principal) ----------------- */
+  --color-orange-primary: #F05A28;
+  --color-orange-light: #FF7A4A;
+  --color-orange-dim: rgba(240, 90, 40, 0.08);
+
+  /* --- Semantic : Success / Green ------------------------ */
+  --color-green-dark: #1A6B45;
+  --color-green-light: #22C55E;
+  --color-green-dim: rgba(26, 107, 69, 0.10);
+
+  /* --- Semantic : Warning / Gold ------------------------- */
+  --color-gold: #D97706;
+  --color-gold-dim: rgba(217, 119, 6, 0.10);
+
+  /* --- Semantic : Error / Red ---------------------------- */
+  --color-red-error: #DC2626;
+  --color-red-dim: rgba(220, 38, 38, 0.08);
+
+  /* --- Semantic : Info / Purple -------------------------- */
+  --color-purple: #7C3AED;
+  --color-purple-dim: rgba(124, 58, 237, 0.10);
+
+  /* --- Shadows ------------------------------------------- */
+  --shadow-subtle: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.06);
+
+  /* --- Animations ---------------------------------------- */
+  --animate-marquee: marquee-scroll 40s linear infinite;
+}
+
+/* ============================================================
+   Keyframes
+   ============================================================ */
+
+@keyframes marquee-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-100%); }
+}
+
+@utility animate-marquee {
+  animation: marquee-scroll 40s linear infinite;
+}
+
+/* ============================================================
+   Skeleton shimmer (DataTable loading)
+   ============================================================ */
+
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+@utility skeleton-shimmer {
+  background: linear-gradient(90deg, var(--color-surface-2) 25%, var(--color-surface-3) 50%, var(--color-surface-2) 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@utility animate-fade-in-up {
+  animation: fade-in-up 0.4s ease-out both;
+}

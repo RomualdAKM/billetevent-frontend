@@ -1,0 +1,9 @@
+{
+  "SN": ["Dakar", "Thiès", "Saint-Louis", "Kaolack", "Ziguinchor", "Touba", "Rufisque", "Mbour", "Diourbel", "Tambacounda", "Richard-Toll", "Louga", "Kolda", "Matam", "Kaffrine", "Sédhiou", "Kédougou", "Fatick", "Pikine", "Guédiawaye"],
+  "CI": ["Abidjan", "Yamoussoukro", "Bouaké", "Daloa", "Korhogo", "San-Pédro", "Man", "Gagnoa", "Divo", "Anyama", "Abengourou", "Grand-Bassam", "Soubré", "Séguéla", "Odienné", "Bondoukou", "Ferkessédougou"],
+  "ML": ["Bamako", "Sikasso", "Mopti", "Koutiala", "Ségou", "Kayes", "Gao", "Kati", "Tombouctou", "Niono", "San", "Bougouni", "Kolokani"],
+  "BF": ["Ouagadougou", "Bobo-Dioulasso", "Koudougou", "Banfora", "Ouahigouya", "Pouytenga", "Kaya", "Tenkodogo", "Fada N'Gourma", "Dédougou", "Houndé", "Ziniaré"],
+  "BJ": ["Cotonou", "Porto-Novo", "Parakou", "Djougou", "Bohicon", "Abomey-Calavi", "Kandi", "Lokossa", "Ouidah", "Natitingou", "Malanville", "Abomey"],
+  "TG": ["Lomé", "Sokodé", "Kara", "Kpalimé", "Atakpamé", "Bassar", "Tsévié", "Aného", "Mango", "Dapaong", "Tabligbo"],
+  "CM": ["Yaoundé", "Douala", "Garoua", "Bamenda", "Maroua", "Bafoussam", "Ngaoundéré", "Bertoua", "Kumba", "Limbe", "Buea", "Kribi", "Edéa", "Ebolowa", "Nkongsamba"]
+}

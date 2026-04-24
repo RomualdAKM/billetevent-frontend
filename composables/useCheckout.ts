@@ -1,0 +1,421 @@
+import type {
+  PaymentState,
+  CheckoutPayload,
+  CheckoutResponse,
+  FormErrors,
+} from '~/types/payment'
+
+const PAYMENT_TIMEOUT_MS = 30_000
+
+export const useCheckout = () => {
+  const { success: notifySuccess, error: notifyError } = useNotification()
+  const cartStore = useCartStore()
+  const { submitCheckout, confirmWizall, validatePromo } = useCheckoutApi()
+
+  const { countries: paymentCountries, fetchOperators, getOperatorsForCountry, getCountryInfo } = usePaymentOperators()
+
+  // Fetch operators on composable init (cached, only one call)
+  fetchOperators()
+
+  // ── Registration data (inscription mode) ──
+  const registrationData = ref({
+    guest_name: '',
+    guest_email: '',
+    guest_phone: '',
+    guest_company: ''
+  })
+
+  // ── Event context ──
+  const eventId = ref<string | number | null>(null)
+  const eventSlug = ref<string | null>(null)
+  const eventName = ref('')
+  const eventDate = ref('')
+  const eventLocation = ref('')
+  const eventData = ref<any>(null)
+
+  const accessMode = computed<'payant' | 'inscription' | 'libre'>(() => eventData.value?.access_mode || 'payant')
+  const isLibre = computed(() => accessMode.value === 'libre')
+  const isInscription = computed(() => accessMode.value === 'inscription')
+
+  const isFreeEvent = computed(() => {
+    if (isInscription.value) return true
+    const passes = eventData.value?.passes
+    if (!passes?.length) return false
+    return passes.every((p: any) => !p.price || p.price === 0)
+  })
+
+  // ── Payment state machine ──
+  const paymentState = ref<PaymentState>('idle')
+
+  const isProcessing = computed(() =>
+    paymentState.value === 'validating' || paymentState.value === 'processing',
+  )
+
+  // ── Form fields ──
+  const paymentMode = ref<'mobile' | 'card' | ''>('')
+  const selectedCountry = ref('')
+  const selectedOperator = ref('')
+  const mobileNumber = ref('')
+  const cardNumber = ref('')
+  const cardExpiry = ref('')
+  const cardCvv = ref('')
+  const cardName = ref('')
+  const formErrors = ref<FormErrors>({})
+
+  // ── Promo ──
+  const promoInput = ref('')
+  const promoLoading = ref(false)
+  const promoApplied = ref(false)
+  const promoError = ref('')
+
+  // ── Wizall OTP ──
+  const wizallOrderId = ref<number | string | null>(null)
+  const wizallCode = ref('')
+  const wizallLoading = ref(false)
+
+  // ── Pending message ──
+  const pendingMessage = ref('')
+
+  // ── Computed: pricing ──
+  const items = computed(() => cartStore.items)
+  const subtotal = computed(() => cartStore.subtotal)
+  const serviceFee = computed(() => 0)
+  const promoDiscount = computed(() => cartStore.discount)
+  const totalTTC = computed(() => Math.max(0, subtotal.value - promoDiscount.value))
+
+  // ── Computed: country/operator ──
+  const activeCountry = computed(() => getCountryInfo(selectedCountry.value))
+  const countryOperators = computed(() => getOperatorsForCountry(selectedCountry.value))
+  const countryDialCode = computed(() => activeCountry.value?.prefix ?? '')
+
+  // ── Watchers: reset dependent fields ──
+  watch(selectedCountry, () => {
+    selectedOperator.value = ''
+    mobileNumber.value = ''
+  })
+
+  watch(paymentMode, () => {
+    selectedCountry.value = ''
+    selectedOperator.value = ''
+    mobileNumber.value = ''
+    cardNumber.value = ''
+    cardExpiry.value = ''
+    cardCvv.value = ''
+    cardName.value = ''
+    formErrors.value = {}
+  })
+
+  // ── Init: restore event context from history state ──
+  function initFromHistoryState() {
+    if (!import.meta.client) return
+
+    const s = window.history.state
+    if (s?.eventName) eventName.value = s.eventName
+    if (s?.eventDate) eventDate.value = s.eventDate
+    if (s?.eventLocation) eventLocation.value = s.eventLocation
+    if (s?.eventId) eventId.value = s.eventId
+    if (s?.eventSlug) eventSlug.value = s.eventSlug
+
+    if (s?.accessMode) {
+      // Pre-set accessMode from history state for immediate UI
+      if (!eventData.value) eventData.value = { access_mode: s.accessMode }
+      else if (!eventData.value.access_mode) eventData.value.access_mode = s.accessMode
+    }
+
+    // Restore registration data
+    if (s?.guestName) registrationData.value.guest_name = s.guestName
+    if (s?.guestEmail) registrationData.value.guest_email = s.guestEmail
+    if (s?.guestPhone) registrationData.value.guest_phone = s.guestPhone
+    if (s?.guestCompany) registrationData.value.guest_company = s.guestCompany
+
+    if (!eventId.value && cartStore.eventId) {
+      eventId.value = cartStore.eventId
+    }
+  }
+
+  async function loadEventDetails() {
+    if (eventName.value && eventDate.value) return
+    if (!eventId.value) return
+
+    try {
+      const { getEvent } = useEventsApi()
+      const res = await getEvent(String(eventId.value))
+      const data = (res as any)?.data ?? res
+      if (!data) return
+
+      eventData.value = data
+      if (!eventSlug.value && data.slug) eventSlug.value = data.slug
+      if (!eventName.value) eventName.value = data.title || ''
+      if (!eventDate.value && data.date_start) {
+        eventDate.value = new Date(data.date_start).toLocaleDateString('fr-FR', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+        })
+      }
+      if (!eventLocation.value) {
+        eventLocation.value = [data.location, data.city].filter(Boolean).join(', ')
+      }
+    } catch {
+      // Event details are non-critical — UI still works without them
+    }
+  }
+
+  // ── Validation ──
+  function validate(): boolean {
+    const errors: FormErrors = {}
+
+    if (cartStore.isEmpty) {
+      errors.cart = 'Votre panier est vide'
+    }
+
+    if (!isFreeEvent.value) {
+      if (!paymentMode.value) {
+        errors.paymentMode = 'Veuillez choisir un moyen de paiement'
+      }
+
+      if (paymentMode.value === 'mobile') {
+        if (!selectedCountry.value) errors.country = 'Veuillez sélectionner votre pays'
+        if (!selectedOperator.value) errors.operator = 'Veuillez choisir un opérateur'
+        if (!mobileNumber.value.trim()) {
+          errors.phone = 'Veuillez saisir votre numéro de téléphone'
+        } else if (mobileNumber.value.replace(/\s/g, '').length < 7) {
+          errors.phone = 'Numéro de téléphone invalide'
+        }
+      }
+    }
+
+    formErrors.value = errors
+    return Object.keys(errors).length === 0
+  }
+
+  // ── Resolve operator key for backend ──
+  function resolveOperatorKey(): string | undefined {
+    if (paymentMode.value !== 'mobile') return undefined
+    // selectedOperator already stores the API key directly (e.g. "orange_money_sn")
+    return selectedOperator.value || undefined
+  }
+
+  // ── Build checkout payload ──
+  function buildPayload(): CheckoutPayload {
+    const payload: CheckoutPayload = {
+      event_id: eventId.value!,
+      items: items.value.map(i => ({ pass_id: i.id, quantity: i.quantity })),
+      payment_method: isFreeEvent.value
+        ? 'free'
+        : (paymentMode.value === 'card' ? 'card' : 'mobile_money'),
+    }
+
+    if (!isFreeEvent.value && paymentMode.value === 'mobile') {
+      payload.operator_key = resolveOperatorKey()
+      payload.phone_number = mobileNumber.value
+      payload.country_code = selectedCountry.value
+    }
+
+    if (cartStore.promoCode) {
+      payload.promo_code = cartStore.promoCode
+    }
+
+    // Include registration data for inscription / free events
+    if (isInscription.value || isFreeEvent.value) {
+      if (registrationData.value.guest_name) payload.guest_name = registrationData.value.guest_name
+      if (registrationData.value.guest_email) payload.guest_email = registrationData.value.guest_email
+      if (registrationData.value.guest_phone) payload.guest_phone = registrationData.value.guest_phone
+      if (registrationData.value.guest_company) payload.guest_company = registrationData.value.guest_company
+    }
+
+    return payload
+  }
+
+  // ── Handle checkout response ──
+  function handleCheckoutResponse(data: CheckoutResponse) {
+    const payment = data.payment_response ?? {}
+
+    if (payment.payment_url) {
+      if (import.meta.client) window.location.href = payment.payment_url
+      return
+    }
+
+    if (payment.client_secret) {
+      notifySuccess('Redirection vers Stripe...')
+      return
+    }
+
+    if (payment.requires_confirmation || selectedOperator.value === 'Wizall') {
+      paymentState.value = 'awaiting_confirmation'
+      wizallOrderId.value = data.order_id ?? null
+      return
+    }
+
+    if (data.payment_status === 'pending' || payment.status === 'pending') {
+      paymentState.value = 'pending'
+      pendingMessage.value = 'Veuillez valider le paiement sur votre téléphone. Vérifiez vos notifications.'
+      return
+    }
+
+    paymentState.value = 'success'
+    notifySuccess('Paiement effectué avec succès !')
+    cartStore.clearCart()
+    navigateTo(`/orders/${data.reference || data.order_id}`)
+  }
+
+  // ── Main pay action ──
+  async function pay() {
+    paymentState.value = 'validating'
+
+    if (!validate()) {
+      paymentState.value = 'idle'
+      const firstError = Object.values(formErrors.value)[0]
+      if (firstError) notifyError(firstError)
+      return
+    }
+
+    paymentState.value = 'processing'
+
+    let timeoutId: ReturnType<typeof setTimeout> | null = null
+
+    try {
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error('__timeout__'))
+        }, PAYMENT_TIMEOUT_MS)
+      })
+
+      const checkoutPromise = submitCheckout(buildPayload())
+
+      const res = await Promise.race([checkoutPromise, timeoutPromise])
+      const data: CheckoutResponse = (res as any)?.data ?? res
+
+      handleCheckoutResponse(data)
+    } catch (err: any) {
+      if (err?.message === '__timeout__') {
+        paymentState.value = 'timeout'
+        pendingMessage.value = 'Le paiement prend plus de temps que prévu. Veuillez patienter ou vérifier votre téléphone.'
+        return
+      }
+
+      paymentState.value = 'failed'
+      const msg = err?.data?.message || err?.message || 'Échec du paiement'
+      notifyError(msg)
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId)
+      if (paymentState.value === 'processing') {
+        paymentState.value = 'idle'
+      }
+    }
+  }
+
+  // ── Promo code ──
+  async function applyPromo() {
+    if (!promoInput.value.trim() || !eventId.value) return
+
+    promoLoading.value = true
+    promoError.value = ''
+
+    try {
+      const res = await validatePromo({ code: promoInput.value.trim(), event_id: eventId.value })
+      const discount = (res as any)?.data?.discount ?? (res as any)?.discount ?? 0
+      cartStore.applyPromo(promoInput.value.trim(), discount)
+      promoApplied.value = true
+      notifySuccess('Code promo appliqué !')
+    } catch (err: any) {
+      promoError.value = err?.data?.message || err?.message || 'Code promo invalide'
+      notifyError(promoError.value)
+    } finally {
+      promoLoading.value = false
+    }
+  }
+
+  // ── Wizall OTP confirmation ──
+  async function confirmWizallCode() {
+    if (!wizallCode.value.trim() || !wizallOrderId.value) return
+
+    wizallLoading.value = true
+
+    try {
+      await confirmWizall({
+        order_id: wizallOrderId.value,
+        authorization_code: wizallCode.value.trim(),
+      })
+      paymentState.value = 'success'
+      notifySuccess('Paiement Wizall confirmé !')
+      cartStore.clearCart()
+      navigateTo(`/orders/${wizallOrderId.value}`)
+    } catch (err: any) {
+      notifyError(err?.data?.message || 'Code Wizall invalide')
+    } finally {
+      wizallLoading.value = false
+    }
+  }
+
+  // ── Format helpers ──
+  function formatPrice(price: number): string {
+    if (price === 0) return 'Gratuit'
+    return new Intl.NumberFormat('fr-FR').format(price) + ' F CFA'
+  }
+
+  return {
+    // Event context
+    eventId,
+    eventSlug,
+    eventName,
+    eventDate,
+    eventLocation,
+    eventData,
+    accessMode,
+    isLibre,
+    isInscription,
+    isFreeEvent,
+    initFromHistoryState,
+    loadEventDetails,
+    registrationData,
+
+    // Payment state
+    paymentState,
+    isProcessing,
+
+    // Form fields
+    paymentMode,
+    selectedCountry,
+    selectedOperator,
+    mobileNumber,
+    cardNumber,
+    cardExpiry,
+    cardCvv,
+    cardName,
+    formErrors,
+
+    // Promo
+    promoInput,
+    promoLoading,
+    promoApplied,
+    promoError,
+
+    // Wizall
+    wizallOrderId,
+    wizallCode,
+    wizallLoading,
+
+    // Pending
+    pendingMessage,
+
+    // Pricing
+    items,
+    subtotal,
+    serviceFee,
+    promoDiscount,
+    totalTTC,
+
+    // Country / operator
+    countries: paymentCountries,
+    activeCountry,
+    countryOperators,
+    countryDialCode,
+
+    // Actions
+    pay,
+    applyPromo,
+    confirmWizallCode,
+    formatPrice,
+  }
+}
