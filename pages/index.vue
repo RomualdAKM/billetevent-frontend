@@ -214,146 +214,155 @@ const revenueCategories = [
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
           Dashboard
         </div>
-        <h2 class="font-serif text-[1.8rem] md:text-[2.2rem] leading-[1.2] text-text-primary mb-3.5 text-center">Suivez tout d'un<br /><em class="italic text-orange-primary">coup d'œil</em></h2>
-        <p class="text-[0.92rem] text-text-tertiary leading-[1.7] max-w-[520px] mx-auto mb-12 text-center">Gérez vos événements, suivez vos ventes et analysez vos performances depuis un tableau de bord intuitif.</p>
+        <h2 class="font-serif text-[1.8rem] md:text-[2.2rem] leading-[1.2] text-text-primary mb-3.5 text-center">Suivez tout d'un<br /><em class="italic text-orange-primary">coup d'oeil</em></h2>
+        <p class="text-[0.92rem] text-text-tertiary leading-[1.7] max-w-[520px] mx-auto mb-12 text-center">Gerez vos evenements, suivez vos ventes et analysez vos performances depuis un tableau de bord intuitif.</p>
 
-        <div class="bg-white rounded-[20px]  border border-border-light overflow-hidden">
-          <div class="bg-[#F0F2F7] px-4 py-2.5 flex items-center gap-2.5 border-b border-border-light">
-            <div class="flex gap-1.5">
-              <div class="w-2.5 h-2.5 rounded-full bg-[#FF5F57]"></div>
-              <div class="w-2.5 h-2.5 rounded-full bg-[#FEBC2E]"></div>
-              <div class="w-2.5 h-2.5 rounded-full bg-[#28C840]"></div>
+        <div class="bg-white rounded-[20px] border border-border-light overflow-hidden">
+          <!-- Barre navigateur -->
+          <div class="bg-[#F0F2F7] px-3 sm:px-4 py-2 sm:py-2.5 flex items-center gap-2 sm:gap-2.5 border-b border-border-light">
+            <div class="flex gap-1 sm:gap-1.5">
+              <div class="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-[#FF5F57]"></div>
+              <div class="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-[#FEBC2E]"></div>
+              <div class="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-[#28C840]"></div>
             </div>
-            <div class="flex-1 bg-white rounded-md px-3 py-1 text-[0.72rem] text-text-tertiary border border-border-light text-left">app.billetevent.com/dashboard</div>
+            <div class="flex-1 bg-white rounded-md px-2 sm:px-3 py-0.5 sm:py-1 text-[0.6rem] sm:text-[0.72rem] text-text-tertiary border border-border-light text-left truncate">app.billetevent.com/dashboard</div>
           </div>
 
-          <div class="hidden md:flex min-h-[520px] font-sans">
-            <div class="w-[200px] shrink-0 bg-white border-r border-border-light flex flex-col">
-              <div class="px-4 pt-4 pb-3.5 border-b border-border-light flex items-center gap-2">
-                <div class="w-7 h-7 rounded-[7px] bg-orange-primary flex items-center justify-center shrink-0 relative overflow-hidden">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" class="relative z-[1]"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/><line x1="9" y1="9" x2="9" y2="15"/></svg>
+          <!-- Desktop + Tablette : sidebar + contenu -->
+          <div class="hidden md:flex min-h-[480px] lg:min-h-[540px] font-sans">
+            <!-- Sidebar -->
+            <div class="w-[160px] lg:w-[200px] shrink-0 bg-white border-r border-border-light flex flex-col">
+              <div class="px-3 lg:px-4 pt-3 lg:pt-4 pb-2.5 lg:pb-3.5 border-b border-border-light flex items-center gap-2">
+                <div class="w-6 lg:w-7 h-6 lg:h-7 rounded-[6px] lg:rounded-[7px] bg-orange-primary flex items-center justify-center shrink-0">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" class="lg:w-[13px] lg:h-[13px]"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/><line x1="9" y1="9" x2="9" y2="15"/></svg>
                 </div>
-                <span class="font-bold text-[0.88rem] text-text-primary">BilletEvent</span>
+                <span class="font-bold text-[0.75rem] lg:text-[0.88rem] text-text-primary">BilletEvent</span>
               </div>
-              <div class="px-2 pt-2.5 flex-1">
-                <div class="text-[0.58rem] font-bold tracking-[0.12em] uppercase text-text-tertiary px-2 pt-2 pb-1">Principal</div>
-                <div class="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-orange-primary/8 mb-0.5">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#F05A28" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-                  <span class="text-[0.78rem] font-semibold text-orange-primary">Vue d'ensemble</span>
+              <div class="px-1.5 lg:px-2 pt-2 flex-1">
+                <div class="text-[0.5rem] lg:text-[0.58rem] font-bold tracking-[0.12em] uppercase text-text-tertiary px-2 pt-2 pb-1">Principal</div>
+                <div class="flex items-center gap-1.5 lg:gap-2 px-2 lg:px-2.5 py-1.5 lg:py-2 rounded-lg bg-orange-primary/8 mb-0.5">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#F05A28" stroke-width="2" stroke-linecap="round" class="shrink-0 lg:w-[13px] lg:h-[13px]"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                  <span class="text-[0.68rem] lg:text-[0.78rem] font-semibold text-orange-primary">Vue d'ensemble</span>
                 </div>
-                <div class="flex items-center gap-2 px-2.5 py-2 rounded-lg mb-0.5">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8A93B2" stroke-width="2" stroke-linecap="round"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/></svg>
-                  <span class="text-[0.78rem] text-text-secondary">Événements</span>
-                  <span class="ml-auto bg-orange-primary text-white text-[0.55rem] font-bold px-1.5 py-0.5 rounded-full">3</span>
+                <div class="flex items-center gap-1.5 lg:gap-2 px-2 lg:px-2.5 py-1.5 lg:py-2 rounded-lg mb-0.5">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#8A93B2" stroke-width="2" stroke-linecap="round" class="shrink-0 lg:w-[13px] lg:h-[13px]"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  <span class="text-[0.68rem] lg:text-[0.78rem] text-text-secondary">Evenements</span>
+                  <span class="ml-auto bg-orange-primary text-white text-[0.5rem] lg:text-[0.55rem] font-bold px-1 lg:px-1.5 py-0.5 rounded-full leading-none">3</span>
                 </div>
-                <div class="flex items-center gap-2 px-2.5 py-2 rounded-lg mb-0.5">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8A93B2" stroke-width="2" stroke-linecap="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                  <span class="text-[0.78rem] text-text-secondary">Revenus</span>
+                <div class="flex items-center gap-1.5 lg:gap-2 px-2 lg:px-2.5 py-1.5 lg:py-2 rounded-lg mb-0.5">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#8A93B2" stroke-width="2" stroke-linecap="round" class="shrink-0 lg:w-[13px] lg:h-[13px]"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                  <span class="text-[0.68rem] lg:text-[0.78rem] text-text-secondary">Revenus</span>
                 </div>
-                <div class="flex items-center gap-2 px-2.5 py-2 rounded-lg mb-0.5">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8A93B2" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                  <span class="text-[0.78rem] text-text-secondary">Participants</span>
+                <div class="flex items-center gap-1.5 lg:gap-2 px-2 lg:px-2.5 py-1.5 lg:py-2 rounded-lg mb-0.5">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#8A93B2" stroke-width="2" stroke-linecap="round" class="shrink-0 lg:w-[13px] lg:h-[13px]"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                  <span class="text-[0.68rem] lg:text-[0.78rem] text-text-secondary">Participants</span>
                 </div>
-                <div class="text-[0.58rem] font-bold tracking-[0.12em] uppercase text-text-tertiary px-2 pt-3 pb-1">Outils</div>
-                <div class="flex items-center gap-2 px-2.5 py-2 rounded-lg mb-0.5">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8A93B2" stroke-width="2" stroke-linecap="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="3" y1="12" x2="21" y2="12"/></svg>
-                  <span class="text-[0.78rem] text-text-secondary">Scan billets</span>
+                <div class="text-[0.5rem] lg:text-[0.58rem] font-bold tracking-[0.12em] uppercase text-text-tertiary px-2 pt-3 pb-1">Outils</div>
+                <div class="flex items-center gap-1.5 lg:gap-2 px-2 lg:px-2.5 py-1.5 lg:py-2 rounded-lg mb-0.5">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#8A93B2" stroke-width="2" stroke-linecap="round" class="shrink-0 lg:w-[13px] lg:h-[13px]"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><rect x="7" y="7" width="10" height="10"/></svg>
+                  <span class="text-[0.68rem] lg:text-[0.78rem] text-text-secondary">Scan billets</span>
                 </div>
-                <div class="flex items-center gap-2 px-2.5 py-2 rounded-lg">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8A93B2" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4"/></svg>
-                  <span class="text-[0.78rem] text-text-secondary">Paramètres</span>
+                <div class="flex items-center gap-1.5 lg:gap-2 px-2 lg:px-2.5 py-1.5 lg:py-2 rounded-lg">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#8A93B2" stroke-width="2" stroke-linecap="round" class="shrink-0 lg:w-[13px] lg:h-[13px]"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4"/></svg>
+                  <span class="text-[0.68rem] lg:text-[0.78rem] text-text-secondary">Parametres</span>
                 </div>
               </div>
-              <div class="px-2 py-3 border-t border-border-light">
-                <div class="flex items-center gap-2 px-2 py-2 rounded-lg bg-surface-2">
-                  <div class="w-7 h-7 rounded-full bg-gradient-to-br from-orange-primary to-orange-light flex items-center justify-center text-[0.72rem] font-bold text-white shrink-0">SA</div>
-                  <div>
-                    <div class="text-[0.75rem] font-semibold text-text-primary">Sarah A.</div>
-                    <div class="text-[0.62rem] text-text-tertiary">Organisatrice</div>
+              <div class="px-1.5 lg:px-2 py-2 lg:py-3 border-t border-border-light">
+                <div class="flex items-center gap-1.5 lg:gap-2 px-1.5 lg:px-2 py-1.5 lg:py-2 rounded-lg bg-surface-2">
+                  <div class="w-6 lg:w-7 h-6 lg:h-7 rounded-full bg-gradient-to-br from-orange-primary to-orange-light flex items-center justify-center text-[0.6rem] lg:text-[0.72rem] font-bold text-white shrink-0">SA</div>
+                  <div class="min-w-0">
+                    <div class="text-[0.65rem] lg:text-[0.75rem] font-semibold text-text-primary truncate">Sarah A.</div>
+                    <div class="text-[0.55rem] lg:text-[0.62rem] text-text-tertiary">Organisatrice</div>
                   </div>
                 </div>
               </div>
             </div>
 
+            <!-- Zone principale -->
             <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
-              <div class="h-[52px] bg-white border-b border-border-light flex items-center justify-between px-5 shrink-0">
-                <div>
-                  <div class="font-serif text-base text-text-primary">Bienvenue, Sarah ! — Vue d'ensemble</div>
-                  <div class="text-[0.68rem] text-text-tertiary">Mardi 25 mars 2026</div>
+              <!-- Header -->
+              <div class="h-[44px] lg:h-[52px] bg-white border-b border-border-light flex items-center justify-between px-3 lg:px-5 shrink-0">
+                <div class="min-w-0">
+                  <div class="font-serif text-[0.82rem] lg:text-base text-text-primary truncate">Bienvenue, Sarah ! — Vue d'ensemble</div>
+                  <div class="text-[0.6rem] lg:text-[0.68rem] text-text-tertiary">Mardi 25 mars 2026</div>
                 </div>
-                <div class="flex items-center gap-2">
-                  <div class="w-[30px] h-[30px] rounded-lg bg-surface-2 border border-border-light flex items-center justify-center relative">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4A5A8A" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-                    <div class="absolute top-1 right-1 w-[7px] h-[7px] rounded-full bg-orange-primary border-[1.5px] border-white"></div>
+                <div class="flex items-center gap-1.5 lg:gap-2 shrink-0">
+                  <div class="w-[26px] lg:w-[30px] h-[26px] lg:h-[30px] rounded-lg bg-surface-2 border border-border-light flex items-center justify-center relative">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#4A5A8A" stroke-width="2" stroke-linecap="round" class="lg:w-[13px] lg:h-[13px]"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                    <div class="absolute top-0.5 right-0.5 lg:top-1 lg:right-1 w-[6px] lg:w-[7px] h-[6px] lg:h-[7px] rounded-full bg-orange-primary border-[1.5px] border-white"></div>
                   </div>
-                  <div class="bg-orange-primary text-white px-3.5 py-1.5 rounded-lg text-[0.75rem] font-bold flex items-center gap-1.5">
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                    Nouvel événement
+                  <div class="bg-orange-primary text-white px-2.5 lg:px-3.5 py-1 lg:py-1.5 rounded-lg text-[0.65rem] lg:text-[0.75rem] font-bold flex items-center gap-1">
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" class="lg:w-[10px] lg:h-[10px]"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    <span class="hidden lg:inline">Nouvel evenement</span>
+                    <span class="lg:hidden">Nouveau</span>
                   </div>
                 </div>
               </div>
 
-              <div class="flex-1 p-[18px] bg-bg-primary overflow-hidden">
-                <div class="grid grid-cols-4 gap-2.5 mb-3.5">
-                  <div class="bg-white rounded-[10px] px-4 py-3.5 border border-border-light">
-                    <div class="flex items-center justify-between mb-2">
-                      <span class="text-[0.62rem] font-bold uppercase tracking-wide text-text-tertiary">Participants</span>
-                      <div class="w-6 h-6 rounded-md bg-orange-dim flex items-center justify-center">
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#F05A28" stroke-width="2.5" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              <!-- Contenu dashboard -->
+              <div class="flex-1 p-3 lg:p-[18px] bg-bg-primary overflow-hidden">
+                <!-- 4 stat cards -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-2.5 mb-3 lg:mb-3.5">
+                  <div class="bg-white rounded-[8px] lg:rounded-[10px] px-2.5 lg:px-4 py-2.5 lg:py-3.5 border border-border-light">
+                    <div class="flex items-center justify-between mb-1.5 lg:mb-2">
+                      <span class="text-[0.52rem] lg:text-[0.62rem] font-bold uppercase tracking-wide text-text-tertiary">Participants</span>
+                      <div class="w-5 lg:w-6 h-5 lg:h-6 rounded-md bg-orange-dim flex items-center justify-center">
+                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#F05A28" stroke-width="2.5" stroke-linecap="round" class="lg:w-[11px] lg:h-[11px]"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
                       </div>
                     </div>
-                    <div class="font-serif text-[1.5rem] text-text-primary leading-none">{{ formatStat(stats.participants) }}</div>
-                    <div class="text-[0.65rem] text-green-dark mt-1.5 flex items-center gap-1">
-                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#1A6B45" stroke-width="2.5" stroke-linecap="round"><polyline points="18 15 12 9 6 15"/></svg>
+                    <div class="font-serif text-[1.1rem] lg:text-[1.5rem] text-text-primary leading-none">{{ formatStat(stats.participants) }}</div>
+                    <div class="text-[0.55rem] lg:text-[0.65rem] text-green-dark mt-1 lg:mt-1.5 flex items-center gap-0.5">
+                      <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#1A6B45" stroke-width="2.5" stroke-linecap="round" class="lg:w-[9px] lg:h-[9px]"><polyline points="18 15 12 9 6 15"/></svg>
                       +12% ce mois
                     </div>
                   </div>
-                  <div class="bg-white rounded-[10px] px-4 py-3.5 border border-border-light">
-                    <div class="flex items-center justify-between mb-2">
-                      <span class="text-[0.62rem] font-bold uppercase tracking-wide text-text-tertiary">Billets vendus</span>
-                      <div class="w-6 h-6 rounded-md bg-blue-main/8 flex items-center justify-center">
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#1B2B5E" stroke-width="2.5" stroke-linecap="round"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/></svg>
+                  <div class="bg-white rounded-[8px] lg:rounded-[10px] px-2.5 lg:px-4 py-2.5 lg:py-3.5 border border-border-light">
+                    <div class="flex items-center justify-between mb-1.5 lg:mb-2">
+                      <span class="text-[0.52rem] lg:text-[0.62rem] font-bold uppercase tracking-wide text-text-tertiary">Billets vendus</span>
+                      <div class="w-5 lg:w-6 h-5 lg:h-6 rounded-md bg-blue-main/8 flex items-center justify-center">
+                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#1B2B5E" stroke-width="2.5" stroke-linecap="round" class="lg:w-[11px] lg:h-[11px]"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/></svg>
                       </div>
                     </div>
-                    <div class="font-serif text-[1.5rem] text-text-primary leading-none">{{ formatStat(stats.tickets_sold) }}</div>
-                    <div class="text-[0.65rem] text-green-dark mt-1.5 flex items-center gap-1">
-                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#1A6B45" stroke-width="2.5" stroke-linecap="round"><polyline points="18 15 12 9 6 15"/></svg>
+                    <div class="font-serif text-[1.1rem] lg:text-[1.5rem] text-text-primary leading-none">{{ formatStat(stats.tickets_sold) }}</div>
+                    <div class="text-[0.55rem] lg:text-[0.65rem] text-green-dark mt-1 lg:mt-1.5 flex items-center gap-0.5">
+                      <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#1A6B45" stroke-width="2.5" stroke-linecap="round" class="lg:w-[9px] lg:h-[9px]"><polyline points="18 15 12 9 6 15"/></svg>
                       +8% ce mois
                     </div>
                   </div>
-                  <div class="bg-white rounded-[10px] px-4 py-3.5 border border-border-light">
-                    <div class="flex items-center justify-between mb-2">
-                      <span class="text-[0.62rem] font-bold uppercase tracking-wide text-text-tertiary">Revenus totaux</span>
-                      <div class="w-6 h-6 rounded-md bg-green-dim flex items-center justify-center">
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#1A6B45" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                  <div class="bg-white rounded-[8px] lg:rounded-[10px] px-2.5 lg:px-4 py-2.5 lg:py-3.5 border border-border-light">
+                    <div class="flex items-center justify-between mb-1.5 lg:mb-2">
+                      <span class="text-[0.52rem] lg:text-[0.62rem] font-bold uppercase tracking-wide text-text-tertiary">Revenus totaux</span>
+                      <div class="w-5 lg:w-6 h-5 lg:h-6 rounded-md bg-green-dim flex items-center justify-center">
+                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#1A6B45" stroke-width="2.5" stroke-linecap="round" class="lg:w-[11px] lg:h-[11px]"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                       </div>
                     </div>
-                    <div class="font-serif text-[1.5rem] text-text-primary leading-none">{{ formatStat(stats.revenue) }} F</div>
-                    <div class="text-[0.65rem] text-green-dark mt-1.5 flex items-center gap-1">
-                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#1A6B45" stroke-width="2.5" stroke-linecap="round"><polyline points="18 15 12 9 6 15"/></svg>
+                    <div class="font-serif text-[1.1rem] lg:text-[1.5rem] text-text-primary leading-none">{{ formatStat(stats.revenue) }} F</div>
+                    <div class="text-[0.55rem] lg:text-[0.65rem] text-green-dark mt-1 lg:mt-1.5 flex items-center gap-0.5">
+                      <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#1A6B45" stroke-width="2.5" stroke-linecap="round" class="lg:w-[9px] lg:h-[9px]"><polyline points="18 15 12 9 6 15"/></svg>
                       +21% ce mois
                     </div>
                   </div>
-                  <div class="bg-white rounded-[10px] px-4 py-3.5 border border-border-light">
-                    <div class="flex items-center justify-between mb-2">
-                      <span class="text-[0.62rem] font-bold uppercase tracking-wide text-text-tertiary">Évén. actifs</span>
-                      <div class="w-6 h-6 rounded-md bg-purple/10 flex items-center justify-center">
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  <div class="bg-white rounded-[8px] lg:rounded-[10px] px-2.5 lg:px-4 py-2.5 lg:py-3.5 border border-border-light">
+                    <div class="flex items-center justify-between mb-1.5 lg:mb-2">
+                      <span class="text-[0.52rem] lg:text-[0.62rem] font-bold uppercase tracking-wide text-text-tertiary">Even. actifs</span>
+                      <div class="w-5 lg:w-6 h-5 lg:h-6 rounded-md bg-purple/10 flex items-center justify-center">
+                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="2.5" stroke-linecap="round" class="lg:w-[11px] lg:h-[11px]"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                       </div>
                     </div>
-                    <div class="font-serif text-[1.5rem] text-text-primary leading-none">{{ formatStat(stats.active_events) }}</div>
-                    <div class="text-[0.65rem] text-green-dark mt-1.5 flex items-center gap-1">
-                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#1A6B45" stroke-width="2.5" stroke-linecap="round"><polyline points="18 15 12 9 6 15"/></svg>
+                    <div class="font-serif text-[1.1rem] lg:text-[1.5rem] text-text-primary leading-none">{{ formatStat(stats.active_events) }}</div>
+                    <div class="text-[0.55rem] lg:text-[0.65rem] text-green-dark mt-1 lg:mt-1.5 flex items-center gap-0.5">
+                      <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#1A6B45" stroke-width="2.5" stroke-linecap="round" class="lg:w-[9px] lg:h-[9px]"><polyline points="18 15 12 9 6 15"/></svg>
                       +4 nouveaux
                     </div>
                   </div>
                 </div>
 
-                <div class="grid grid-cols-[1.6fr_1fr] gap-2.5 mb-3.5">
-                  <div class="bg-white rounded-[10px] px-4 py-3.5 border border-border-light">
-                    <div class="flex items-center justify-between mb-2.5">
-                      <div class="text-[0.78rem] font-bold text-text-primary">Ventes mensuelles (2026)</div>
-                      <div class="text-[0.65rem] text-text-tertiary bg-surface-2 px-2 py-0.5 rounded-full">6 derniers mois</div>
+                <!-- Graphique + Revenus par categorie -->
+                <div class="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-2 lg:gap-2.5 mb-3 lg:mb-3.5">
+                  <div class="bg-white rounded-[8px] lg:rounded-[10px] px-2.5 lg:px-4 py-2.5 lg:py-3.5 border border-border-light">
+                    <div class="flex items-center justify-between mb-2 lg:mb-2.5">
+                      <div class="text-[0.68rem] lg:text-[0.78rem] font-bold text-text-primary">Ventes mensuelles (2026)</div>
+                      <div class="text-[0.55rem] lg:text-[0.65rem] text-text-tertiary bg-surface-2 px-1.5 lg:px-2 py-0.5 rounded-full">6 derniers mois</div>
                     </div>
                     <svg viewBox="0 0 320 90" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto">
                       <defs>
@@ -369,7 +378,7 @@ const revenueCategories = [
                       <text x="67" y="88" font-family="DM Sans,sans-serif" font-size="7" fill="#8A93B2">Nov</text>
                       <text x="124" y="88" font-family="DM Sans,sans-serif" font-size="7" fill="#8A93B2">Dec</text>
                       <text x="181" y="88" font-family="DM Sans,sans-serif" font-size="7" fill="#8A93B2">Jan</text>
-                      <text x="238" y="88" font-family="DM Sans,sans-serif" font-size="7" fill="#8A93B2">Fév</text>
+                      <text x="238" y="88" font-family="DM Sans,sans-serif" font-size="7" fill="#8A93B2">Fev</text>
                       <text x="295" y="88" font-family="DM Sans,sans-serif" font-size="7" fill="#8A93B2">Mar</text>
                       <path d="M10,65 C35,60 55,52 74,48 C93,44 105,55 124,42 C143,29 158,34 181,24 C204,14 222,20 245,16 C262,13 280,17 310,12 L310,78 L10,78Z" fill="url(#g1)"/>
                       <path d="M10,65 C35,60 55,52 74,48 C93,44 105,55 124,42 C143,29 158,34 181,24 C204,14 222,20 245,16 C262,13 280,17 310,12" fill="none" stroke="#F05A28" stroke-width="2" stroke-linecap="round"/>
@@ -381,15 +390,15 @@ const revenueCategories = [
                       <circle cx="310" cy="12" r="4" fill="#F05A28" stroke="#fff" stroke-width="2"/>
                     </svg>
                   </div>
-                  <div class="bg-white rounded-[10px] px-4 py-3.5 border border-border-light">
-                    <div class="text-[0.78rem] font-bold text-text-primary mb-3">Revenus par catégorie</div>
-                    <div class="flex flex-col gap-2">
+                  <div class="bg-white rounded-[8px] lg:rounded-[10px] px-2.5 lg:px-4 py-2.5 lg:py-3.5 border border-border-light">
+                    <div class="text-[0.68rem] lg:text-[0.78rem] font-bold text-text-primary mb-2 lg:mb-3">Revenus par categorie</div>
+                    <div class="flex flex-col gap-1.5 lg:gap-2">
                       <div v-for="cat in revenueCategories" :key="cat.name">
                         <div class="flex justify-between mb-0.5">
-                          <span class="text-[0.68rem] text-text-secondary">{{ cat.name }}</span>
-                          <span class="text-[0.68rem] font-bold text-text-primary">{{ cat.pct }}%</span>
+                          <span class="text-[0.58rem] lg:text-[0.68rem] text-text-secondary">{{ cat.name }}</span>
+                          <span class="text-[0.58rem] lg:text-[0.68rem] font-bold text-text-primary">{{ cat.pct }}%</span>
                         </div>
-                        <div class="h-[5px] bg-surface-2 rounded-full overflow-hidden">
+                        <div class="h-[4px] lg:h-[5px] bg-surface-2 rounded-full overflow-hidden">
                           <div :class="['h-full rounded-full', cat.color]" :style="{ width: cat.pct + '%' }"></div>
                         </div>
                       </div>
@@ -397,28 +406,29 @@ const revenueCategories = [
                   </div>
                 </div>
 
-                <div class="bg-white rounded-[10px] border border-border-light overflow-hidden">
-                  <div class="px-4 py-3 border-b border-border-light flex items-center justify-between">
-                    <div class="text-[0.78rem] font-bold text-text-primary">Événements récents</div>
-                    <div class="text-[0.68rem] text-orange-primary font-semibold">Voir tout →</div>
+                <!-- Evenements recents -->
+                <div class="bg-white rounded-[8px] lg:rounded-[10px] border border-border-light overflow-hidden">
+                  <div class="px-2.5 lg:px-4 py-2 lg:py-3 border-b border-border-light flex items-center justify-between">
+                    <div class="text-[0.68rem] lg:text-[0.78rem] font-bold text-text-primary">Evenements recents</div>
+                    <div class="text-[0.58rem] lg:text-[0.68rem] text-orange-primary font-semibold">Voir tout →</div>
                   </div>
-                  <table class="w-full border-collapse text-[0.72rem]">
+                  <table class="w-full border-collapse text-[0.6rem] lg:text-[0.72rem]">
                     <thead>
                       <tr class="bg-bg-primary">
-                        <th class="px-4 py-2 text-left font-semibold text-text-tertiary text-[0.62rem] uppercase tracking-wide">Événement</th>
-                        <th class="px-4 py-2 text-left font-semibold text-text-tertiary text-[0.62rem] uppercase tracking-wide">Date</th>
-                        <th class="px-4 py-2 text-left font-semibold text-text-tertiary text-[0.62rem] uppercase tracking-wide">Billets</th>
-                        <th class="px-4 py-2 text-left font-semibold text-text-tertiary text-[0.62rem] uppercase tracking-wide">Revenus</th>
-                        <th class="px-4 py-2 text-left font-semibold text-text-tertiary text-[0.62rem] uppercase tracking-wide">Statut</th>
+                        <th class="px-2.5 lg:px-4 py-1.5 lg:py-2 text-left font-semibold text-text-tertiary text-[0.52rem] lg:text-[0.62rem] uppercase tracking-wide">Evenement</th>
+                        <th class="px-2.5 lg:px-4 py-1.5 lg:py-2 text-left font-semibold text-text-tertiary text-[0.52rem] lg:text-[0.62rem] uppercase tracking-wide hidden lg:table-cell">Date</th>
+                        <th class="px-2.5 lg:px-4 py-1.5 lg:py-2 text-left font-semibold text-text-tertiary text-[0.52rem] lg:text-[0.62rem] uppercase tracking-wide">Billets</th>
+                        <th class="px-2.5 lg:px-4 py-1.5 lg:py-2 text-left font-semibold text-text-tertiary text-[0.52rem] lg:text-[0.62rem] uppercase tracking-wide hidden lg:table-cell">Revenus</th>
+                        <th class="px-2.5 lg:px-4 py-1.5 lg:py-2 text-left font-semibold text-text-tertiary text-[0.52rem] lg:text-[0.62rem] uppercase tracking-wide">Statut</th>
                       </tr>
                     </thead>
                     <tbody>
                       <tr v-for="(evt, i) in dashboardEvents" :key="i" :class="['border-t border-border-light', i % 2 === 1 ? 'bg-[#FAFBFD]' : '']">
-                        <td class="px-4 py-2.5 text-text-primary font-semibold">{{ evt.name }}</td>
-                        <td class="px-4 py-2.5 text-text-tertiary">{{ evt.date }}</td>
-                        <td class="px-4 py-2.5 text-text-primary">{{ evt.tickets }}</td>
-                        <td class="px-4 py-2.5 text-text-primary font-semibold">{{ evt.revenue }}</td>
-                        <td class="px-4 py-2.5"><span :class="['text-[0.62rem] font-bold px-2 py-0.5 rounded-full', evt.statusClass]">{{ evt.status }}</span></td>
+                        <td class="px-2.5 lg:px-4 py-2 lg:py-2.5 text-text-primary font-semibold">{{ evt.name }}</td>
+                        <td class="px-2.5 lg:px-4 py-2 lg:py-2.5 text-text-tertiary hidden lg:table-cell">{{ evt.date }}</td>
+                        <td class="px-2.5 lg:px-4 py-2 lg:py-2.5 text-text-primary">{{ evt.tickets }}</td>
+                        <td class="px-2.5 lg:px-4 py-2 lg:py-2.5 text-text-primary font-semibold hidden lg:table-cell">{{ evt.revenue }}</td>
+                        <td class="px-2.5 lg:px-4 py-2 lg:py-2.5"><span :class="['text-[0.52rem] lg:text-[0.62rem] font-bold px-1.5 lg:px-2 py-0.5 rounded-full whitespace-nowrap', evt.statusClass]">{{ evt.status }}</span></td>
                       </tr>
                     </tbody>
                   </table>
@@ -427,23 +437,108 @@ const revenueCategories = [
             </div>
           </div>
 
-          <div class="md:hidden p-6 bg-bg-primary">
-            <div class="grid grid-cols-2 gap-2.5 mb-3">
-              <div class="bg-white rounded-[10px] px-3 py-3 border border-border-light">
-                <div class="text-[0.6rem] font-bold uppercase text-text-tertiary mb-1">Participants</div>
-                <div class="font-serif text-xl text-text-primary">{{ formatStat(stats.participants) }}</div>
+          <!-- Mobile : version sans sidebar -->
+          <div class="md:hidden font-sans">
+            <!-- Header mobile -->
+            <div class="h-[40px] bg-white border-b border-border-light flex items-center justify-between px-3 shrink-0">
+              <div class="min-w-0">
+                <div class="font-serif text-[0.72rem] text-text-primary truncate">Bienvenue, Sarah !</div>
+                <div class="text-[0.52rem] text-text-tertiary">Vue d'ensemble</div>
               </div>
-              <div class="bg-white rounded-[10px] px-3 py-3 border border-border-light">
-                <div class="text-[0.6rem] font-bold uppercase text-text-tertiary mb-1">Billets vendus</div>
-                <div class="font-serif text-xl text-text-primary">{{ formatStat(stats.tickets_sold) }}</div>
+              <div class="flex items-center gap-1.5 shrink-0">
+                <div class="w-5 h-5 rounded-full bg-gradient-to-br from-orange-primary to-orange-light flex items-center justify-center text-[0.45rem] font-bold text-white">SA</div>
+                <div class="bg-orange-primary text-white px-2 py-0.5 rounded text-[0.55rem] font-bold flex items-center gap-0.5">
+                  <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  Nouveau
+                </div>
               </div>
-              <div class="bg-white rounded-[10px] px-3 py-3 border border-border-light">
-                <div class="text-[0.6rem] font-bold uppercase text-text-tertiary mb-1">Revenus totaux</div>
-                <div class="font-serif text-xl text-text-primary">{{ formatStat(stats.revenue) }} F</div>
+            </div>
+            <!-- Contenu mobile -->
+            <div class="p-2.5 bg-bg-primary">
+              <!-- Stats 2x2 -->
+              <div class="grid grid-cols-2 gap-1.5 mb-2.5">
+                <div class="bg-white rounded-[7px] px-2.5 py-2 border border-border-light">
+                  <div class="flex items-center justify-between mb-1">
+                    <span class="text-[0.5rem] font-bold uppercase text-text-tertiary">Participants</span>
+                    <div class="w-4 h-4 rounded bg-orange-dim flex items-center justify-center">
+                      <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#F05A28" stroke-width="2.5" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                    </div>
+                  </div>
+                  <div class="font-serif text-[0.95rem] text-text-primary leading-none">{{ formatStat(stats.participants) }}</div>
+                  <div class="text-[0.48rem] text-green-dark mt-1 flex items-center gap-0.5">
+                    <svg width="6" height="6" viewBox="0 0 24 24" fill="none" stroke="#1A6B45" stroke-width="2.5" stroke-linecap="round"><polyline points="18 15 12 9 6 15"/></svg>
+                    +12%
+                  </div>
+                </div>
+                <div class="bg-white rounded-[7px] px-2.5 py-2 border border-border-light">
+                  <div class="flex items-center justify-between mb-1">
+                    <span class="text-[0.5rem] font-bold uppercase text-text-tertiary">Billets vendus</span>
+                    <div class="w-4 h-4 rounded bg-blue-main/8 flex items-center justify-center">
+                      <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#1B2B5E" stroke-width="2.5" stroke-linecap="round"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/></svg>
+                    </div>
+                  </div>
+                  <div class="font-serif text-[0.95rem] text-text-primary leading-none">{{ formatStat(stats.tickets_sold) }}</div>
+                  <div class="text-[0.48rem] text-green-dark mt-1 flex items-center gap-0.5">
+                    <svg width="6" height="6" viewBox="0 0 24 24" fill="none" stroke="#1A6B45" stroke-width="2.5" stroke-linecap="round"><polyline points="18 15 12 9 6 15"/></svg>
+                    +8%
+                  </div>
+                </div>
+                <div class="bg-white rounded-[7px] px-2.5 py-2 border border-border-light">
+                  <div class="flex items-center justify-between mb-1">
+                    <span class="text-[0.5rem] font-bold uppercase text-text-tertiary">Revenus totaux</span>
+                    <div class="w-4 h-4 rounded bg-green-dim flex items-center justify-center">
+                      <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#1A6B45" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                    </div>
+                  </div>
+                  <div class="font-serif text-[0.95rem] text-text-primary leading-none">{{ formatStat(stats.revenue) }} F</div>
+                  <div class="text-[0.48rem] text-green-dark mt-1 flex items-center gap-0.5">
+                    <svg width="6" height="6" viewBox="0 0 24 24" fill="none" stroke="#1A6B45" stroke-width="2.5" stroke-linecap="round"><polyline points="18 15 12 9 6 15"/></svg>
+                    +21%
+                  </div>
+                </div>
+                <div class="bg-white rounded-[7px] px-2.5 py-2 border border-border-light">
+                  <div class="flex items-center justify-between mb-1">
+                    <span class="text-[0.5rem] font-bold uppercase text-text-tertiary">Even. actifs</span>
+                    <div class="w-4 h-4 rounded bg-purple/10 flex items-center justify-center">
+                      <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    </div>
+                  </div>
+                  <div class="font-serif text-[0.95rem] text-text-primary leading-none">{{ formatStat(stats.active_events) }}</div>
+                  <div class="text-[0.48rem] text-green-dark mt-1 flex items-center gap-0.5">
+                    <svg width="6" height="6" viewBox="0 0 24 24" fill="none" stroke="#1A6B45" stroke-width="2.5" stroke-linecap="round"><polyline points="18 15 12 9 6 15"/></svg>
+                    +4 nouveaux
+                  </div>
+                </div>
               </div>
-              <div class="bg-white rounded-[10px] px-3 py-3 border border-border-light">
-                <div class="text-[0.6rem] font-bold uppercase text-text-tertiary mb-1">Évén. actifs</div>
-                <div class="font-serif text-xl text-text-primary">{{ formatStat(stats.active_events) }}</div>
+              <!-- Graphique mobile -->
+              <div class="bg-white rounded-[7px] px-2.5 py-2 border border-border-light mb-2">
+                <div class="flex items-center justify-between mb-1.5">
+                  <div class="text-[0.58rem] font-bold text-text-primary">Ventes mensuelles</div>
+                  <div class="text-[0.48rem] text-text-tertiary bg-surface-2 px-1.5 py-0.5 rounded-full">6 mois</div>
+                </div>
+                <svg viewBox="0 0 320 70" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto">
+                  <line x1="0" y1="18" x2="320" y2="18" stroke="#F0F2F7" stroke-width="1"/>
+                  <line x1="0" y1="40" x2="320" y2="40" stroke="#F0F2F7" stroke-width="1"/>
+                  <line x1="0" y1="58" x2="320" y2="58" stroke="#F0F2F7" stroke-width="1"/>
+                  <path d="M10,52 C35,48 55,42 74,38 C93,34 105,44 124,34 C143,23 158,27 181,19 C204,11 222,16 245,13 C262,10 280,14 310,9 L310,63 L10,63Z" fill="url(#g1)"/>
+                  <path d="M10,52 C35,48 55,42 74,38 C93,34 105,44 124,34 C143,23 158,27 181,19 C204,11 222,16 245,13 C262,10 280,14 310,9" fill="none" stroke="#F05A28" stroke-width="2" stroke-linecap="round"/>
+                  <circle cx="310" cy="9" r="3" fill="#F05A28" stroke="#fff" stroke-width="1.5"/>
+                </svg>
+              </div>
+              <!-- Revenus par categorie mobile -->
+              <div class="bg-white rounded-[7px] px-2.5 py-2 border border-border-light">
+                <div class="text-[0.58rem] font-bold text-text-primary mb-1.5">Revenus par categorie</div>
+                <div class="flex flex-col gap-1.5">
+                  <div v-for="cat in revenueCategories" :key="cat.name">
+                    <div class="flex justify-between mb-0.5">
+                      <span class="text-[0.5rem] text-text-secondary">{{ cat.name }}</span>
+                      <span class="text-[0.5rem] font-bold text-text-primary">{{ cat.pct }}%</span>
+                    </div>
+                    <div class="h-[3px] bg-surface-2 rounded-full overflow-hidden">
+                      <div :class="['h-full rounded-full', cat.color]" :style="{ width: cat.pct + '%' }"></div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
