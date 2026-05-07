@@ -136,18 +136,12 @@ const revenueCategories = [
           </div>
         </div>
 
-        <div class="relative flex items-center justify-center">
-          <div class="relative p-6 flex justify-center">
-            <div class="w-[380px] max-w-full rounded-2xl overflow-hidden ">
-              <div class="w-full h-full bg-gradient-to-br from-orange-primary via-orange-light to-blue-main aspect-[3/4] flex items-center justify-center">
-                <div class="text-center text-white">
-                  <svg class="mx-auto mb-4" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/><line x1="9" y1="9" x2="9" y2="15"/></svg>
-                  <div class="font-serif text-2xl">BilletEvent</div>
-                  <div class="text-sm text-white/70 mt-1">Votre billet numérique</div>
-                </div>
-              </div>
-            </div>
-          </div>
+        <div class="flex items-center justify-center">
+          <img
+            src="~/assets/banner.png"
+            alt="Billet BilletEvent"
+            class="w-full max-w-[420px] rounded-lg"
+          />
         </div>
       </div>
     </section>

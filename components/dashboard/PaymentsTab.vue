@@ -179,7 +179,10 @@ onMounted(() => { loadData() })
     <template v-else>
       <div class="flex flex-col gap-3 mb-5">
         <div v-for="m in methods" :key="m.id" class="flex items-center gap-4 bg-white rounded-lg p-4">
-          <span class="text-xl shrink-0">{{ m.type === 'mobile' ? '📱' : '🏦' }}</span>
+          <span class="shrink-0 text-orange-primary">
+            <svg v-if="m.type === 'mobile'" xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+            <svg v-else xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M3 10h18"/><path d="M12 3l9 7H3l9-7z"/><path d="M5 10v11"/><path d="M19 10v11"/><path d="M9 10v11"/><path d="M14 10v11"/></svg>
+          </span>
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2">
               <span class="text-sm font-medium text-text-primary truncate">
@@ -209,13 +212,22 @@ onMounted(() => { loadData() })
 
       <div class="flex gap-3 mb-5">
         <button
-          v-for="t in [{ key: 'mobile', icon: '📱', label: 'Mobile Money' }, { key: 'bank', icon: '🏦', label: 'Virement bancaire' }]" :key="t.key"
           type="button"
-          class="rounded-lg py-2.5 px-4 text-sm font-medium border transition-colors cursor-pointer"
-          :class="formType === t.key ? 'bg-orange-dim text-orange-primary border-orange-primary/20' : 'bg-white text-text-secondary border-border-light hover:bg-surface-2'"
-          @click="formType = t.key as 'mobile' | 'bank'"
+          class="rounded-lg py-2.5 px-4 text-sm font-medium border transition-colors cursor-pointer flex items-center gap-2"
+          :class="formType === 'mobile' ? 'bg-orange-dim text-orange-primary border-orange-primary/20' : 'bg-white text-text-secondary border-border-light hover:bg-surface-2'"
+          @click="formType = 'mobile'"
         >
-          {{ t.icon }} {{ t.label }}
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+          Mobile Money
+        </button>
+        <button
+          type="button"
+          class="rounded-lg py-2.5 px-4 text-sm font-medium border transition-colors cursor-pointer flex items-center gap-2"
+          :class="formType === 'bank' ? 'bg-orange-dim text-orange-primary border-orange-primary/20' : 'bg-white text-text-secondary border-border-light hover:bg-surface-2'"
+          @click="formType = 'bank'"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M3 10h18"/><path d="M12 3l9 7H3l9-7z"/><path d="M5 10v11"/><path d="M19 10v11"/><path d="M9 10v11"/><path d="M14 10v11"/></svg>
+          Virement bancaire
         </button>
       </div>
 
