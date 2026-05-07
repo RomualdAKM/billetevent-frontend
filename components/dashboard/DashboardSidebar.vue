@@ -47,8 +47,8 @@
     <!-- Navigation scrollable -->
     <nav class="flex-1 overflow-y-auto overflow-x-hidden py-3 scrollbar-thin">
       <!-- Grouped navigation -->
-      <template v-for="(group, gIdx) in navGroups">
-        <div :key="gIdx" class="px-3" :class="gIdx > 0 ? 'mt-5' : ''">
+      <template v-for="(group, gIdx) in navGroups" :key="gIdx">
+        <div class="px-3" :class="gIdx > 0 ? 'mt-5' : ''">
           <div
             v-if="!collapsed && group.title"
             class="text-xs font-medium tracking-wider uppercase text-text-tertiary px-2.5 mb-1.5 select-none"
