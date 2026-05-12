@@ -14,7 +14,7 @@ const processingId = ref<number | null>(null)
 
 const kycList = ref<any[]>([])
 
-const pendingList = computed(() => kycList.value.filter((k: any) => k.status === 'pending'))
+const pendingList = computed(() => kycList.value.filter((k: any) => k.status === 'pending' || k.status === 'submitted'))
 const displayList = computed(() => activeTab.value === 'pending' ? pendingList.value : kycList.value)
 
 const toggleExpand = async (id: number) => {
@@ -27,7 +27,17 @@ const toggleExpand = async (id: number) => {
     const detail = response?.data || response
     const idx = kycList.value.findIndex((k: any) => k.id === id)
     if (idx !== -1 && detail) {
-      kycList.value[idx] = { ...kycList.value[idx], ...detail }
+      kycList.value[idx] = {
+        ...kycList.value[idx],
+        ...detail,
+        firstName: detail.identity_first_name || detail.firstName || kycList.value[idx].firstName || '',
+        lastName: detail.identity_last_name || detail.lastName || kycList.value[idx].lastName || '',
+        dob: detail.identity_birth_date || detail.dob || kycList.value[idx].dob || '',
+        docNumber: detail.document_number || detail.docNumber || kycList.value[idx].docNumber || '',
+        documentRectoUrl: detail.document_recto_url || null,
+        documentVersoUrl: detail.document_verso_url || null,
+        businessDocumentUrl: detail.business_document_url || null,
+      }
     }
   } catch (err) {
     console.error('Erreur chargement détail KYC:', err)
@@ -38,12 +48,12 @@ const toggleExpand = async (id: number) => {
 const approveKyc = async (id: number) => {
   processingId.value = id
   try {
-    await api.reviewKyc(id, { status: 'approved' })
+    await api.reviewKyc(id, { decision: 'approved' })
     const idx = kycList.value.findIndex((k: any) => k.id === id)
     if (idx !== -1) {
-      kycList.value[idx].status = 'approved'
+      kycList.value[idx].status = 'validated'
       expandedId.value = null
-      success('KYC approuv\u00e9 pour ' + kycList.value[idx].name)
+      success('KYC approuvé pour ' + kycList.value[idx].name)
     }
   } catch (err: any) {
     notifyError(err?.message || err?.data?.message || 'Erreur lors de l\'approbation')
@@ -62,13 +72,13 @@ const confirmReject = async () => {
   if (!rejectReason.value.trim() || !rejectingId.value) return
   processingId.value = rejectingId.value
   try {
-    await api.reviewKyc(rejectingId.value, { status: 'rejected', reason: rejectReason.value })
+    await api.reviewKyc(rejectingId.value, { decision: 'rejected', rejection_reason: rejectReason.value })
     const idx = kycList.value.findIndex((k: any) => k.id === rejectingId.value)
     if (idx !== -1) {
       kycList.value[idx].status = 'rejected'
       kycList.value[idx].rejectReason = rejectReason.value
       expandedId.value = null
-      success('KYC rejet\u00e9 pour ' + kycList.value[idx].name)
+      success('KYC rejeté pour ' + kycList.value[idx].name)
     }
     showRejectModal.value = false
     rejectingId.value = null
@@ -81,15 +91,15 @@ const confirmReject = async () => {
 }
 
 const statusLabel = (s: string) => {
-  if (s === 'pending') return 'En attente'
-  if (s === 'approved') return 'Approuv\u00e9'
-  if (s === 'rejected') return 'Rejet\u00e9'
+  if (s === 'pending' || s === 'submitted') return 'En attente'
+  if (s === 'approved' || s === 'validated') return 'Approuvé'
+  if (s === 'rejected') return 'Rejeté'
   return s
 }
 
 const statusClass = (s: string) => {
-  if (s === 'pending') return 'bg-gold/10 text-gold'
-  if (s === 'approved') return 'bg-green-dark/10 text-green-dark'
+  if (s === 'pending' || s === 'submitted') return 'bg-gold/10 text-gold'
+  if (s === 'approved' || s === 'validated') return 'bg-green-dark/10 text-green-dark'
   if (s === 'rejected') return 'bg-red-error/10 text-red-error'
   return ''
 }
@@ -121,6 +131,9 @@ const loadKyc = async () => {
       businessName: k.businessName || k.business_name || '',
       businessRegNumber: k.businessRegNumber || k.business_reg_number || '',
       rejectReason: k.rejection_reason || k.rejectReason || k.reject_reason || '',
+      documentRectoUrl: null,
+      documentVersoUrl: null,
+      businessDocumentUrl: null,
     }))
   } catch (err: any) {
     notifyError(err?.message || err?.data?.message || 'Erreur lors du chargement des KYC')
@@ -135,7 +148,6 @@ onMounted(loadKyc)
 <template>
   <div>
     <div class="mb-6">
-      <h2 class="font-serif text-2xl text-text-primary mb-1">Vérifications KYC</h2>
       <p class="text-sm text-text-secondary">Gérez les demandes de vérification d'identité des organisateurs</p>
     </div>
 
@@ -188,17 +200,23 @@ onMounted(loadKyc)
                   <div>
                     <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wide mb-3">Informations d'identité</div>
                     <div class="flex flex-col gap-2">
-                      <div class="flex justify-between text-sm"><span class="text-text-secondary">Prénom</span><span class="text-text-primary font-medium">{{ kyc.firstName }}</span></div>
-                      <div class="flex justify-between text-sm"><span class="text-text-secondary">Nom</span><span class="text-text-primary font-medium">{{ kyc.lastName }}</span></div>
-                      <div class="flex justify-between text-sm"><span class="text-text-secondary">Date de naissance</span><span class="text-text-primary font-medium">{{ kyc.dob }}</span></div>
-                      <div class="flex justify-between text-sm"><span class="text-text-secondary">N° document</span><span class="text-text-primary font-medium">{{ kyc.docNumber }}</span></div>
+                      <div class="flex justify-between text-sm"><span class="text-text-secondary">Prénom</span><span class="text-text-primary font-medium">{{ kyc.firstName || '\u2014' }}</span></div>
+                      <div class="flex justify-between text-sm"><span class="text-text-secondary">Nom</span><span class="text-text-primary font-medium">{{ kyc.lastName || '\u2014' }}</span></div>
+                      <div class="flex justify-between text-sm"><span class="text-text-secondary">Date de naissance</span><span class="text-text-primary font-medium">{{ kyc.dob ? formatDate(kyc.dob) : '\u2014' }}</span></div>
+                      <div class="flex justify-between text-sm"><span class="text-text-secondary">N° document</span><span class="text-text-primary font-medium">{{ kyc.docNumber || '\u2014' }}</span></div>
                     </div>
                   </div>
                   <div>
                     <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wide mb-3">Document</div>
                     <div class="flex gap-3 mb-4">
-                      <div class="w-32 h-20 bg-surface-2 border border-border-light rounded-lg flex items-center justify-center text-xs text-text-tertiary">Recto</div>
-                      <div class="w-32 h-20 bg-surface-2 border border-border-light rounded-lg flex items-center justify-center text-xs text-text-tertiary">Verso</div>
+                      <div class="w-32 h-20 bg-surface-2 border border-border-light rounded-lg flex items-center justify-center text-xs text-text-tertiary overflow-hidden">
+                        <img v-if="kyc.documentRectoUrl" :src="kyc.documentRectoUrl" alt="Recto" class="w-full h-full object-cover" />
+                        <span v-else>Recto</span>
+                      </div>
+                      <div class="w-32 h-20 bg-surface-2 border border-border-light rounded-lg flex items-center justify-center text-xs text-text-tertiary overflow-hidden">
+                        <img v-if="kyc.documentVersoUrl" :src="kyc.documentVersoUrl" alt="Verso" class="w-full h-full object-cover" />
+                        <span v-else>Verso</span>
+                      </div>
                     </div>
                     <template v-if="kyc.businessName">
                       <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wide mb-3 mt-4">Documents business</div>
@@ -209,13 +227,15 @@ onMounted(loadKyc)
                     </template>
                   </div>
                 </div>
-                <div v-if="kyc.status === 'pending'" class="flex items-center gap-3 mt-6 pt-4 border-t border-border-light">
+                <div v-if="kyc.status === 'pending' || kyc.status === 'submitted'" class="flex items-center gap-3 mt-6 pt-4 border-t border-border-light">
                   <button
-                    class="px-5 py-2 rounded-lg text-sm font-semibold bg-green-dark text-white border-none cursor-pointer transition-opacity hover:opacity-90"
+                    class="px-5 py-2 rounded-lg text-sm font-semibold bg-green-dark text-white border-none cursor-pointer transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                    :disabled="processingId === kyc.id"
                     @click="approveKyc(kyc.id)"
-                  >Approuver</button>
+                  >{{ processingId === kyc.id ? 'Traitement...' : 'Approuver' }}</button>
                   <button
-                    class="px-5 py-2 rounded-lg text-sm font-semibold bg-red-error text-white border-none cursor-pointer transition-opacity hover:opacity-90"
+                    class="px-5 py-2 rounded-lg text-sm font-semibold bg-red-error text-white border-none cursor-pointer transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                    :disabled="processingId === kyc.id"
                     @click="openReject(kyc.id)"
                   >Rejeter</button>
                 </div>
@@ -248,13 +268,13 @@ onMounted(loadKyc)
           >{{ expandedId === kyc.id ? 'Masquer' : 'Voir détails' }}</button>
           <div v-if="expandedId === kyc.id" class="mt-3 pt-3 border-t border-border-light">
             <div class="flex flex-col gap-2 mb-3">
-              <div class="flex justify-between text-sm"><span class="text-text-secondary">Prénom</span><span class="text-text-primary font-medium">{{ kyc.firstName }}</span></div>
-              <div class="flex justify-between text-sm"><span class="text-text-secondary">Nom</span><span class="text-text-primary font-medium">{{ kyc.lastName }}</span></div>
-              <div class="flex justify-between text-sm"><span class="text-text-secondary">Date de naissance</span><span class="text-text-primary font-medium">{{ kyc.dob }}</span></div>
+              <div class="flex justify-between text-sm"><span class="text-text-secondary">Prénom</span><span class="text-text-primary font-medium">{{ kyc.firstName || '\u2014' }}</span></div>
+              <div class="flex justify-between text-sm"><span class="text-text-secondary">Nom</span><span class="text-text-primary font-medium">{{ kyc.lastName || '\u2014' }}</span></div>
+              <div class="flex justify-between text-sm"><span class="text-text-secondary">Date de naissance</span><span class="text-text-primary font-medium">{{ kyc.dob ? formatDate(kyc.dob) : '\u2014' }}</span></div>
             </div>
-            <div v-if="kyc.status === 'pending'" class="flex items-center gap-3">
-              <button class="px-4 py-2 rounded-lg text-sm font-semibold bg-green-dark text-white border-none cursor-pointer" @click="approveKyc(kyc.id)">Approuver</button>
-              <button class="px-4 py-2 rounded-lg text-sm font-semibold bg-red-error text-white border-none cursor-pointer" @click="openReject(kyc.id)">Rejeter</button>
+            <div v-if="kyc.status === 'pending' || kyc.status === 'submitted'" class="flex items-center gap-3">
+              <button class="px-4 py-2 rounded-lg text-sm font-semibold bg-green-dark text-white border-none cursor-pointer disabled:opacity-50" :disabled="processingId === kyc.id" @click="approveKyc(kyc.id)">{{ processingId === kyc.id ? 'Traitement...' : 'Approuver' }}</button>
+              <button class="px-4 py-2 rounded-lg text-sm font-semibold bg-red-error text-white border-none cursor-pointer disabled:opacity-50" :disabled="processingId === kyc.id" @click="openReject(kyc.id)">Rejeter</button>
             </div>
           </div>
         </div>
