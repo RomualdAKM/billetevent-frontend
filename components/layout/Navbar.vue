@@ -19,6 +19,11 @@ const navLinks = [
   { label: 'Contact', to: '/contact' },
 ]
 
+const isLinkActive = (to: string) => {
+  if (to === '/') return route.path === '/'
+  return route.path.startsWith(to)
+}
+
 watch(() => route.path, () => {
   dropdownOpen.value = false
   mobileMenuOpen.value = false
@@ -74,7 +79,7 @@ onUnmounted(() => {
     <div class="flex items-center gap-2.5">
       <ul class="hidden md:flex gap-9 list-none">
         <li v-for="link in navLinks" :key="link.label">
-          <NuxtLink :to="link.to" class="text-sm font-medium text-text-secondary tracking-wide hover:text-orange-primary transition-colors duration-200">{{ link.label }}</NuxtLink>
+          <NuxtLink :to="link.to" :class="isLinkActive(link.to) ? 'text-sm font-medium text-orange-primary tracking-wide transition-colors duration-200' : 'text-sm font-medium text-text-secondary tracking-wide hover:text-orange-primary transition-colors duration-200'">{{ link.label }}</NuxtLink>
         </li>
       </ul>
 

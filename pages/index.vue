@@ -124,7 +124,7 @@ const faqItems = [
           <img
             src="~/assets/banner.png"
             alt="Billet BilletEvent"
-            class="w-full max-w-[420px] rounded-lg"
+            class="w-full max-w-[280px] md:max-w-[320px] rounded-lg"
           />
         </div>
       </div>

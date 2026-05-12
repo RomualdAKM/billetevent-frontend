@@ -34,7 +34,7 @@
           <li><NuxtLink to="/events" class="text-sm text-white/60 hover:text-white transition-colors duration-150">Événements</NuxtLink></li>
           <li><NuxtLink to="/dashboard/events/create" class="text-sm text-white/60 hover:text-white transition-colors duration-150">Créer un événement</NuxtLink></li>
           <li><NuxtLink to="/pricing" class="text-sm text-white/60 hover:text-white transition-colors duration-150">Tarifs</NuxtLink></li>
-          <li><NuxtLink to="/points-de-vente" class="text-sm text-white/60 hover:text-white transition-colors duration-150">Points de vente</NuxtLink></li>
+          <!-- <li><NuxtLink to="/points-de-vente" class="text-sm text-white/60 hover:text-white transition-colors duration-150">Points de vente</NuxtLink></li> -->
         </ul>
       </div>
 
