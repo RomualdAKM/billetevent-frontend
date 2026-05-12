@@ -36,6 +36,7 @@ const toggleExpand = async (id: number) => {
         docNumber: detail.document_number || detail.docNumber || kycList.value[idx].docNumber || '',
         documentRectoUrl: detail.document_recto_url || null,
         documentVersoUrl: detail.document_verso_url || null,
+        selfieUrl: detail.selfie_url || null,
         businessDocumentUrl: detail.business_document_url || null,
       }
     }
@@ -133,6 +134,7 @@ const loadKyc = async () => {
       rejectReason: k.rejection_reason || k.rejectReason || k.reject_reason || '',
       documentRectoUrl: null,
       documentVersoUrl: null,
+      selfieUrl: null,
       businessDocumentUrl: null,
     }))
   } catch (err: any) {
@@ -208,7 +210,7 @@ onMounted(loadKyc)
                   </div>
                   <div>
                     <div class="text-xs font-semibold text-text-tertiary uppercase tracking-wide mb-3">Document</div>
-                    <div class="flex gap-3 mb-4">
+                    <div class="flex gap-3 mb-4 flex-wrap">
                       <div class="w-32 h-20 bg-surface-2 border border-border-light rounded-lg flex items-center justify-center text-xs text-text-tertiary overflow-hidden">
                         <img v-if="kyc.documentRectoUrl" :src="kyc.documentRectoUrl" alt="Recto" class="w-full h-full object-cover" />
                         <span v-else>Recto</span>
@@ -216,6 +218,10 @@ onMounted(loadKyc)
                       <div class="w-32 h-20 bg-surface-2 border border-border-light rounded-lg flex items-center justify-center text-xs text-text-tertiary overflow-hidden">
                         <img v-if="kyc.documentVersoUrl" :src="kyc.documentVersoUrl" alt="Verso" class="w-full h-full object-cover" />
                         <span v-else>Verso</span>
+                      </div>
+                      <div class="w-32 h-20 bg-surface-2 border border-border-light rounded-lg flex items-center justify-center text-xs text-text-tertiary overflow-hidden">
+                        <img v-if="kyc.selfieUrl" :src="kyc.selfieUrl" alt="Selfie" class="w-full h-full object-cover" />
+                        <span v-else>Selfie</span>
                       </div>
                     </div>
                     <template v-if="kyc.businessName">
