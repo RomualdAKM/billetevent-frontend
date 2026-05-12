@@ -48,10 +48,9 @@ const saveEdit = async () => {
   saving.value = true
   try {
     await api.updateFee(editingFee.value.id, {
-      gateway_fee: Number(editForm.gatewayFeeValue),
-      platform_fee: Number(editForm.platformFeeValue),
-      fee_type: editForm.gatewayFeeType,
+      gateway_fee_value: Number(editForm.gatewayFeeValue),
       gateway_fee_type: editForm.gatewayFeeType,
+      platform_fee_value: Number(editForm.platformFeeValue),
       platform_fee_type: editForm.platformFeeType,
     })
     const idx = fees.value.findIndex((f: any) => f.id === editingFee.value.id)
