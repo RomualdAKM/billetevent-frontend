@@ -37,9 +37,9 @@ const formatFee = (type: string, value: number) => {
 const openEdit = (fee: any) => {
   editingFee.value = fee
   editForm.gatewayFeeType = fee.gatewayFeeType || fee.gateway_fee_type || 'percentage'
-  editForm.gatewayFeeValue = fee.gatewayFeeValue || fee.gateway_fee || 0
+  editForm.gatewayFeeValue = fee.gatewayFeeValue ?? fee.gateway_fee_value ?? 0
   editForm.platformFeeType = fee.platformFeeType || fee.platform_fee_type || 'percentage'
-  editForm.platformFeeValue = fee.platformFeeValue || fee.platform_fee || 0
+  editForm.platformFeeValue = fee.platformFeeValue ?? fee.platform_fee_value ?? 0
   showEditModal.value = true
 }
 
@@ -57,14 +57,14 @@ const saveEdit = async () => {
     if (idx !== -1) {
       fees.value[idx] = {
         ...fees.value[idx],
+        gateway_fee_type: editForm.gatewayFeeType,
+        gateway_fee_value: Number(editForm.gatewayFeeValue),
         gatewayFeeType: editForm.gatewayFeeType,
         gatewayFeeValue: Number(editForm.gatewayFeeValue),
-        gateway_fee_type: editForm.gatewayFeeType,
-        gateway_fee: Number(editForm.gatewayFeeValue),
+        platform_fee_type: editForm.platformFeeType,
+        platform_fee_value: Number(editForm.platformFeeValue),
         platformFeeType: editForm.platformFeeType,
         platformFeeValue: Number(editForm.platformFeeValue),
-        platform_fee_type: editForm.platformFeeType,
-        platform_fee: Number(editForm.platformFeeValue),
       }
     }
     showEditModal.value = false
@@ -82,18 +82,47 @@ const loadFees = async () => {
   try {
     const response = await api.getFees()
     const data = response?.data || response
-    const items = Array.isArray(data) ? data : (data?.items || data?.fees || [])
-    fees.value = items.map((f: any) => ({
-      ...f,
-      operator: f.operator || f.payment_method?.operator_name || f.payment_method || '',
-      country: f.country || f.payment_method?.country_code || '',
-      gateway: f.gateway || f.payment_method?.gateway || '',
-      direction: f.direction || '',
-      gatewayFeeType: f.gatewayFeeType || f.gateway_fee_type || 'percentage',
-      gatewayFeeValue: f.gatewayFeeValue ?? f.gateway_fee_value ?? f.gateway_fee ?? 0,
-      platformFeeType: f.platformFeeType || f.platform_fee_type || 'percentage',
-      platformFeeValue: f.platformFeeValue ?? f.platform_fee_value ?? f.platform_fee ?? 0,
-    }))
+    const groups = Array.isArray(data) ? data : (data?.items || data?.fees || [])
+
+    // L'API retourne des groupes { payment_method, payin: [...], payout: [...] }
+    // On aplatit en items individuels pour avoir chaque frais avec son id
+    const flatFees: any[] = []
+    for (const group of groups) {
+      // Si l'item est déjà un frais plat (a un id directement), le garder tel quel
+      if (group.id && !group.payin && !group.payout) {
+        flatFees.push({
+          ...group,
+          operator: group.operator || group.payment_method?.operator_name || '',
+          country: group.country || group.payment_method?.country_code || '',
+          gateway: group.gateway || group.payment_method?.gateway || '',
+          direction: group.direction || '',
+          gatewayFeeType: group.gateway_fee_type || 'percentage',
+          gatewayFeeValue: group.gateway_fee_value ?? 0,
+          platformFeeType: group.platform_fee_type || 'percentage',
+          platformFeeValue: group.platform_fee_value ?? 0,
+        })
+        continue
+      }
+
+      // Structure groupée : extraire chaque fee de payin et payout
+      const method = group.payment_method || {}
+      const allFeeItems = [...(group.payin || []), ...(group.payout || [])]
+      for (const f of allFeeItems) {
+        flatFees.push({
+          ...f,
+          id: f.id,
+          operator: method.operator_name || '',
+          country: method.country_code || '',
+          gateway: method.gateway || '',
+          direction: f.direction || '',
+          gatewayFeeType: f.gateway_fee_type || 'percentage',
+          gatewayFeeValue: f.gateway_fee_value ?? 0,
+          platformFeeType: f.platform_fee_type || 'percentage',
+          platformFeeValue: f.platform_fee_value ?? 0,
+        })
+      }
+    }
+    fees.value = flatFees
   } catch (err: any) {
     notifyError(err?.message || err?.data?.message || 'Erreur lors du chargement des frais')
   } finally {
