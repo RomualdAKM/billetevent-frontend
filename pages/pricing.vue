@@ -8,13 +8,13 @@ useSeoMeta({
 
 const features = [
   { title: 'Vente en ligne 24/7', desc: 'Votre billetterie ne dort jamais. Vos participants achètent leurs billets à tout moment.', icon: 'clock' },
-  { title: 'Points de vente', desc: 'Activez la vente physique via notre réseau de points de vente partenaires.', icon: 'store' },
+  // { title: 'Points de vente', desc: 'Activez la vente physique via notre réseau de points de vente partenaires.', icon: 'store' },
   { title: 'Vente WhatsApp', desc: 'Partagez un lien direct vers vos billets sur WhatsApp et vendez instantanément.', icon: 'whatsapp' },
-  { title: 'Impression de billets', desc: 'Générez des billets physiques et électroniques avec des QR codes uniques.', icon: 'print' },
+  // { title: 'Impression de billets', desc: 'Générez des billets physiques et électroniques avec des QR codes uniques.', icon: 'print' },
   { title: 'Billets d\'invitation', desc: 'Créez des invitations VIP, presse ou partenaires en quelques clics.', icon: 'vip' },
   { title: 'Validateur QR code', desc: 'Scannez et validez les billets le jour J depuis votre smartphone.', icon: 'qr' },
   { title: 'Campagne email', desc: 'Envoyez des emails ciblés pour promouvoir vos événements.', icon: 'mail' },
-  { title: 'Campagne SMS', desc: 'Atteignez votre audience directement via des campagnes SMS personnalisées.', icon: 'sms' },
+  // { title: 'Campagne SMS', desc: 'Atteignez votre audience directement via des campagnes SMS personnalisées.', icon: 'sms' },
   { title: 'Sponsoring réseaux sociaux', desc: 'Boostez votre visibilité avec des campagnes sponsorisées intégrées.', icon: 'social' },
   { title: 'Communication ciblée', desc: 'Segmentez votre audience et envoyez le bon message au bon moment.', icon: 'target' },
   { title: 'Promotions et offres limitées', desc: 'Créez des offres flash, early bird et promotions temporaires.', icon: 'promo' },
@@ -29,7 +29,7 @@ const steps = [
 ]
 
 const advantages = [
-  { title: 'Vendez partout', desc: 'Marketplace active 24/7, multicanal : site web, WhatsApp, points de vente physiques.', icon: 'globe' },
+  { title: 'Vendez partout', desc: 'Marketplace active 24/7, multicanal : site web, WhatsApp.', icon: 'globe' },
   { title: 'Zéro paperasse', desc: 'Tout est digital, tout est fluide. Fini les fichiers Excel et les listes papier.', icon: 'digital' },
   { title: 'Simple et rapide', desc: 'Créez votre événement et commencez à vendre vos billets en quelques minutes.', icon: 'flash' },
   { title: 'Support humain', desc: 'Notre équipe est disponible pour vous accompagner à chaque étape.', icon: 'support' },

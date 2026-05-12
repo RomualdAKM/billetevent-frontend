@@ -27,7 +27,7 @@ const missions = [
 const solutions = [
   {
     title: 'Une marketplace active 24/7',
-    desc: 'Vendez vos billets en continu via notre marketplace multicanal : site web, WhatsApp et points de vente physiques. Vos événements sont accessibles partout, tout le temps.',
+    desc: 'Vendez vos billets en continu via notre marketplace multicanal : site web, WhatsApp. Vos événements sont accessibles partout, tout le temps.',
     icon: 'globe',
   },
   {
