@@ -63,7 +63,19 @@ function mapKycData(data: any) {
     }
   }
 
-  if (kyc.steps && Array.isArray(kyc.steps)) {
+  // Priorite au statut global KYC pour les etats terminaux
+  const overallStatus = typeof kyc.status === 'string' ? kyc.status : kyc.status?.value || ''
+  if (overallStatus === 'validated') {
+    docStatus.value = 'approved'
+  } else if (overallStatus === 'rejected') {
+    docStatus.value = 'rejected'
+    rejectionReason.value = kyc.rejection_reason || ''
+    // Completer avec la raison de l'etape 4 si disponible
+    if (!rejectionReason.value && kyc.steps && Array.isArray(kyc.steps)) {
+      const step4 = kyc.steps.find((s: any) => s.step === 4)
+      if (step4?.rejection_reason) rejectionReason.value = step4.rejection_reason
+    }
+  } else if (kyc.steps && Array.isArray(kyc.steps)) {
     const step4 = kyc.steps.find((s: any) => s.step === 4)
     if (step4) {
       if (step4.status === 'validated') docStatus.value = 'approved'
@@ -75,14 +87,11 @@ function mapKycData(data: any) {
       else docStatus.value = 'pending'
     }
   } else {
-    const s = kyc.status
-    if (s === 'validated') docStatus.value = 'approved'
-    else if (s === 'rejected') { docStatus.value = 'rejected'; rejectionReason.value = kyc.rejection_reason || '' }
-    else if (s === 'submitted') docStatus.value = 'submitted'
+    if (overallStatus === 'submitted') docStatus.value = 'submitted'
     else docStatus.value = 'pending'
   }
 
-  docSubmitted.value = docStatus.value === 'submitted' || docStatus.value === 'approved'
+  docSubmitted.value = docStatus.value === 'submitted' || docStatus.value === 'approved' || docStatus.value === 'rejected'
 }
 
 async function loadKyc() {
