@@ -493,7 +493,7 @@ watchEffect(() => {
 <template>
   <div>
     <div v-if="loading" class="w-full h-[420px] bg-gray-200 animate-pulse max-sm:h-[280px]" />
-    <div v-else-if="event" class="w-full overflow-hidden">
+    <div v-else-if="event" class="w-full overflow-x-hidden">
       <div class="w-full h-[420px] flex items-center justify-center relative overflow-hidden bg-bg-secondary max-sm:h-[280px]">
         <img v-if="event.flyer_url" :src="event.flyer_url" :alt="event.title" class="w-full h-full object-cover" loading="lazy" />
         <div v-else class="flex flex-col items-center gap-3 text-center px-6 py-10">
@@ -505,7 +505,7 @@ watchEffect(() => {
     </div>
 
     <div class="bg-surface border-b border-border-light overflow-x-auto">
-      <div class="max-w-[1160px] mx-auto px-10 flex items-center max-md:px-5 max-sm:flex-col max-sm:px-0 max-sm:items-stretch">
+      <div class="max-w-[1160px] mx-auto px-10 flex items-center max-md:px-5 max-sm:flex-col max-sm:px-3 max-sm:items-stretch">
         <div class="inline-flex items-center gap-2 border-r border-border-light px-5 py-3 whitespace-nowrap max-sm:border-r-0 max-sm:border-b max-sm:px-4 max-sm:py-2.5 max-sm:justify-center">
           <span v-if="event?.event_type === 'enligne'" class="inline-flex items-center gap-1.5 px-3 py-[5px] rounded-full text-[0.73rem] font-bold tracking-wide bg-blue-50 text-blue-600">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10l4.553-2.276A1 1 0 0 1 21 8.618v6.764a1 1 0 0 1-1.447.894L15 14M5 18h8a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2z"/></svg>
@@ -525,7 +525,7 @@ watchEffect(() => {
         </div>
         <div class="flex items-start gap-2.5 px-6 py-3.5 border-r border-border-light max-sm:whitespace-normal max-sm:px-4 max-sm:py-3 max-sm:border-r-0 max-sm:border-b max-sm:w-full">
           <div class="w-8 h-8 rounded-lg bg-bg-primary flex items-center justify-center shrink-0 mt-0.5"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
-          <div class="min-w-0"><div class="text-xs text-text-secondary uppercase tracking-widest mb-px">Date</div><div class="text-sm font-semibold text-text-primary">{{ event ? formattedDateRange : '' }}</div></div>
+          <div class="min-w-0"><div class="text-xs text-text-secondary uppercase tracking-widest mb-px">Date</div><div class="text-sm font-semibold text-text-primary break-words">{{ event ? formattedDateRange : '' }}</div></div>
         </div>
         <div class="flex items-start gap-2.5 px-6 py-3.5 border-r border-border-light max-sm:whitespace-normal max-sm:px-4 max-sm:py-3 max-sm:border-b max-sm:border-r-0 max-sm:w-full">
           <div class="w-8 h-8 rounded-lg bg-bg-primary flex items-center justify-center shrink-0 mt-0.5"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
@@ -557,7 +557,7 @@ watchEffect(() => {
             </div>
             <button v-if="showFollowButton" :disabled="followLoading" class="px-4 py-1.5 rounded-full text-sm font-medium cursor-pointer transition-colors" :class="isFollowing ? 'border border-orange-primary text-orange-primary hover:bg-orange-50' : 'bg-orange-primary text-white hover:bg-orange-600'" @click="toggleFollow">{{ isFollowing ? 'Suivi' : 'Suivre' }}</button>
           </div>
-          <h1 class="font-serif text-[clamp(1.5rem,3.5vw,2.3rem)] leading-[1.15] text-text-primary max-sm:text-[clamp(1.3rem,5vw,1.7rem)]">{{ event?.title ?? '' }}</h1>
+          <h1 class="font-serif text-[clamp(1.5rem,3.5vw,2.3rem)] leading-[1.15] text-text-primary max-sm:text-[clamp(1.3rem,5vw,1.7rem)] break-words">{{ event?.title ?? '' }}</h1>
         </div>
 
         <div class="bg-surface border border-border-light rounded-xl p-7  max-sm:p-4">
@@ -586,25 +586,25 @@ watchEffect(() => {
           </div>
         </div>
 
-        <div id="programme" class="bg-surface border border-border-light rounded-xl p-7  max-sm:p-5">
+        <div id="programme" class="bg-surface border border-border-light rounded-xl p-7 max-sm:p-4 overflow-hidden">
           <h2 class="font-serif text-lg font-normal mb-4 text-text-primary">Programme du jour</h2>
           <div v-if="programme.length === 0" class="text-sm text-text-tertiary italic py-4">Aucun programme n'a été ajouté pour cet événement.</div>
           <div v-else class="flex flex-col">
-            <div v-for="(item, i) in programme" :key="i" class="grid grid-cols-[64px_1fr_auto] items-center gap-4 py-[15px] px-1.5 border-b border-border-light rounded-lg transition-colors hover:bg-bg-primary last:border-b-0 max-sm:grid-cols-[52px_1fr] max-sm:gap-2.5">
+            <div v-for="(item, i) in programme" :key="i" class="grid grid-cols-[64px_1fr_auto] items-center gap-4 py-[15px] px-1.5 border-b border-border-light rounded-lg transition-colors hover:bg-bg-primary last:border-b-0 max-sm:grid-cols-[44px_1fr_auto] max-sm:gap-2 max-sm:px-0">
               <div class="text-center bg-bg-primary rounded-lg py-2 px-1">
-                <div class="font-serif text-[1.05rem] text-text-primary leading-none">{{ item.time }}</div>
+                <div class="font-serif text-[1.05rem] text-text-primary leading-none max-sm:text-[0.9rem]">{{ item.time }}</div>
                 <div class="text-[0.62rem] text-text-tertiary uppercase tracking-wide">{{ item.ampm }}</div>
               </div>
-              <div>
-                <div class="text-sm font-semibold text-text-primary mb-[3px]">{{ item.title }}</div>
-                <div class="text-[0.77rem] text-text-tertiary">{{ item.sub }}</div>
+              <div class="min-w-0">
+                <div class="text-sm font-semibold text-text-primary mb-[3px] break-words">{{ item.title }}</div>
+                <div class="text-[0.77rem] text-text-tertiary break-words">{{ item.sub }}</div>
               </div>
-              <span class="px-2.5 py-1 rounded-full text-[0.67rem] font-bold tracking-wide uppercase whitespace-nowrap border max-sm:text-[0.6rem]" :class="item.chipClass">{{ item.chip }}</span>
+              <span class="px-2 py-1 rounded-full text-[0.67rem] font-bold tracking-wide uppercase whitespace-nowrap border max-sm:text-[0.6rem] max-sm:px-1.5 shrink-0" :class="item.chipClass">{{ item.chip }}</span>
             </div>
           </div>
         </div>
 
-        <section v-if="event?.gallery?.length" id="galerie" class="bg-surface border border-border-light rounded-xl p-7  max-sm:p-5">
+        <section v-if="event?.gallery?.length" id="galerie" class="bg-surface border border-border-light rounded-xl p-7 max-sm:p-4 overflow-hidden">
           <h2 class="font-serif text-lg font-normal mb-4 text-text-primary">Galerie photos</h2>
           <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             <div v-for="(img, i) in event.gallery" :key="i"
@@ -615,16 +615,16 @@ watchEffect(() => {
           </div>
         </section>
 
-        <div id="artistes" class="bg-surface border border-border-light rounded-xl p-7  max-sm:p-5">
-          <h2 class="font-serif text-lg font-normal mb-4 text-text-primary">Artistes &amp; Intervenants</h2>
+        <div id="artistes" class="bg-surface border border-border-light rounded-xl p-7 max-sm:p-4 overflow-hidden">
+          <h2 class="font-serif text-lg font-normal mb-4 text-text-primary break-words">Artistes &amp; Intervenants</h2>
           <div v-if="artists.length === 0" class="text-sm text-text-tertiary italic py-4">Aucun artiste n'a été annoncé pour cet événement.</div>
           <div v-else class="grid grid-cols-3 gap-4 max-sm:grid-cols-2">
-            <div v-for="(artist, i) in artists" :key="i" class="flex flex-col items-center text-center p-6 pb-5 border border-border-light rounded-xl bg-surface transition-colors hover:border-orange-primary">
-              <div class="w-24 h-24 rounded-full mb-3.5 shrink-0 overflow-hidden border-[3px] border-border-light bg-[#e8e4dc]">
+            <div v-for="(artist, i) in artists" :key="i" class="flex flex-col items-center text-center p-4 pb-4 border border-border-light rounded-xl bg-surface transition-colors hover:border-orange-primary max-sm:p-3">
+              <div class="w-24 h-24 rounded-full mb-3.5 shrink-0 overflow-hidden border-[3px] border-border-light bg-[#e8e4dc] max-sm:w-16 max-sm:h-16 max-sm:mb-2.5">
                 <img :src="artist.img" :alt="artist.name" class="w-full h-full object-cover block" loading="lazy" />
               </div>
-              <div class="font-serif text-base text-text-primary mb-1.5">{{ artist.name }}</div>
-              <div class="inline-block text-xs font-bold tracking-wide uppercase bg-bg-primary text-text-tertiary px-3 py-1 rounded-full">{{ artist.role }}</div>
+              <div class="font-serif text-base text-text-primary mb-1.5 break-words w-full max-sm:text-sm">{{ artist.name }}</div>
+              <div class="inline-block text-xs font-bold tracking-wide uppercase bg-bg-primary text-text-tertiary px-3 py-1 rounded-full max-w-full truncate">{{ artist.role }}</div>
             </div>
           </div>
         </div>
@@ -664,7 +664,7 @@ watchEffect(() => {
           </div>
         </div>
 
-        <div id="emplacement" class="bg-surface border border-border-light rounded-xl p-7  max-sm:p-5">
+        <div id="emplacement" class="bg-surface border border-border-light rounded-xl p-7 max-sm:p-4 overflow-hidden">
           <h2 class="font-serif text-lg font-normal mb-4 text-text-primary">Lieu &amp; Accès</h2>
           <div class="rounded-lg overflow-hidden border border-border-light">
             <div v-if="event?.latitude && event?.longitude" class="w-full h-[200px] max-sm:h-[140px]">
