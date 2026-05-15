@@ -15,7 +15,7 @@ const navLinks = [
   { label: 'Événements', to: '/events' },
   { label: 'À propos', to: '/about' },
   { label: 'Tarifs', to: '/pricing' },
-  { label: 'FAQ', to: '/faq' },
+  // { label: 'FAQ', to: '/faq' },
   { label: 'Contact', to: '/contact' },
 ]
 
