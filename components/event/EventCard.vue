@@ -65,7 +65,7 @@ const toggleFavorite = () => {
       <div v-if="organizer" class="flex items-center gap-2 mb-2">
         <NuxtLink :to="`/organizers/${organizer.id}`" class="flex items-center gap-2 no-underline" @click.stop>
           <span class="w-6 h-6 rounded-full bg-orange-primary text-white text-xs flex items-center justify-center font-semibold shrink-0">{{ organizer.initials }}</span>
-          <span class="text-sm text-text-tertiary hover:text-orange-primary transition-colors">{{ organizer.name }}</span>
+          <span class="text-sm text-text-tertiary hover:text-orange-primary transition-colors">{{ organizer.display_name || organizer.name }}</span>
         </NuxtLink>
         <button class="text-xs text-orange-primary hover:underline cursor-pointer ml-auto" @click.stop>S'abonner</button>
       </div>

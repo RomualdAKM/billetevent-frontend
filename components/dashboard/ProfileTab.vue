@@ -32,7 +32,7 @@ async function loadProfile() {
   try {
     const res = await api.getProfile()
     const data = (res as any).data ?? res
-    orgName.value = data.org_name || data.name || data.organization_name || ''
+    orgName.value = data.display_name || ((data.org_name && data.org_name !== 'Mon organisation') ? data.org_name : '') || data.name || data.organization_name || ''
     orgEmail.value = data.org_email || data.email || data.contact_email || ''
     orgPhone.value = data.org_phone || data.phone || data.contact_phone || ''
     orgDescription.value = data.description || ''

@@ -198,7 +198,7 @@ const resetFilters = () => {
             :category="evt.category"
             :image="evt.flyer_url"
             :gradient="evt.gradient || 'from-orange-primary to-orange-light'"
-            :event="{ ...evt, isVerified: evt.is_verified, isFavorite: isFavorite(evt.id), organizer: evt.organizer ? { ...evt.organizer, initials: getInitials(evt.organizer.name) } : null }"
+            :event="{ ...evt, isVerified: evt.is_verified, isFavorite: isFavorite(evt.id), organizer: evt.organizer ? { ...evt.organizer, initials: getInitials(evt.organizer.display_name || evt.organizer.name) } : null }"
             @toggle-favorite="toggleFavorite"
           />
         </NuxtLink>

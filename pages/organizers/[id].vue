@@ -7,10 +7,10 @@
     <div class="bg-bg-surface rounded-xl p-8 mb-8">
       <div class="flex flex-col md:flex-row items-center md:items-start gap-6">
         <div class="w-24 h-24 rounded-full bg-orange-primary flex items-center justify-center shrink-0">
-          <span class="text-white text-3xl font-bold">{{ organizer.initials || organizer.name?.substring(0, 2)?.toUpperCase() || 'OR' }}</span>
+          <span class="text-white text-3xl font-bold">{{ organizer.initials || (organizer.display_name || organizer.name)?.substring(0, 2)?.toUpperCase() || 'OR' }}</span>
         </div>
         <div class="flex-1 text-center md:text-left">
-          <h1 class="font-serif text-2xl text-text-primary mb-2">{{ organizer.name }}</h1>
+          <h1 class="font-serif text-2xl text-text-primary mb-2">{{ organizer.display_name || organizer.name }}</h1>
           <div class="flex items-center justify-center md:justify-start gap-3 text-sm text-text-secondary mb-3">
             <span>{{ organizer.events_count || 0 }} événements</span>
             <span class="w-1 h-1 rounded-full bg-text-tertiary" />
@@ -258,7 +258,8 @@ watchEffect(() => {
   if (!organizer.value) return
 
   const o = organizer.value
-  const name = o.organization_name || o.name || `${o.first_name || ''} ${o.last_name || ''}`.trim()
+  const rawName = o.organization_name || o.org_name || o.name || `${o.first_name || ''} ${o.last_name || ''}`.trim()
+  const name = (rawName && rawName !== 'Mon organisation') ? rawName : `${o.first_name || ''} ${o.last_name || ''}`.trim() || rawName
   const seoTitle = `${name} | BilletEvent`
   const seoDescription = o.description
     ? o.description.substring(0, 160)

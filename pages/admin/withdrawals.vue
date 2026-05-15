@@ -105,7 +105,7 @@ const loadWithdrawals = async () => {
     const items = Array.isArray(data) ? data : (data?.items || data?.withdrawals || [])
     withdrawals.value = items.map((w: any) => ({
       ...w,
-      organizer: w.organizer || w.organizer_name || w.wallet?.organizer?.org_name || w.wallet?.organizer?.name || '',
+      organizer: w.organizer || w.organizer_name || w.wallet?.organizer?.display_name || w.wallet?.organizer?.org_name || w.wallet?.organizer?.name || '',
       email: w.email || w.organizer_email || w.wallet?.organizer?.email || '',
       amount: w.amount || 0,
       method: w.method || w.withdrawal_method || '',

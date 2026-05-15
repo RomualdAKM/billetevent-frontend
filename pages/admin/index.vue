@@ -64,7 +64,7 @@ const loadDashboard = async () => {
     const payoutsData = payouts?.data || payouts
     const payoutsArray = payoutsData?.top_organizers || (Array.isArray(payoutsData) ? payoutsData : [])
     topOrganizers.value = payoutsArray.map((item: any) => ({
-      name: item.organizer?.name ?? item.name ?? 'N/A',
+      name: item.organizer?.display_name ?? item.organizer?.name ?? item.name ?? 'N/A',
       email: item.organizer?.email ?? item.email ?? '',
       events: item.events ?? '-',
       balance: item.available_balance ?? item.balance ?? 0,

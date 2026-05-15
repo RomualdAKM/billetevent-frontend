@@ -119,6 +119,11 @@ const handleResetPassword = async () => {
         <svg v-else class="animate-spin" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10" stroke-opacity="0.3"/><path d="M12 2a10 10 0 0 1 10 10"/></svg>
         {{ loading ? 'Enregistrement...' : 'Enregistrer le mot de passe' }}
       </button>
+      <div class="text-center mt-4">
+        <NuxtLink to="/" class="text-sm text-gray-500 hover:text-orange-500 transition-colors">
+          Retour à l'accueil
+        </NuxtLink>
+      </div>
     </div>
   </div>
   </div>

@@ -156,6 +156,11 @@ onUnmounted(() => {
           {{ resendCooldown > 0 ? `Renvoyer (${resendCooldown}s)` : 'Renvoyer' }}
         </button>
       </div>
+      <div class="text-center mt-4">
+        <NuxtLink to="/" class="text-sm text-gray-500 hover:text-orange-500 transition-colors">
+          Retour à l'accueil
+        </NuxtLink>
+      </div>
     </div>
   </div>
   </div>

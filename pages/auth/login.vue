@@ -110,6 +110,11 @@ const handleLogin = async () => {
       <div class="text-center mt-5 text-[0.8rem] text-text-tertiary">
         Vous n'avez pas de compte ? <NuxtLink to="/auth/register" class="text-orange-primary font-semibold">Créer un compte</NuxtLink>
       </div>
+      <div class="text-center mt-4">
+        <NuxtLink to="/" class="text-sm text-gray-500 hover:text-orange-500 transition-colors">
+          Retour à l'accueil
+        </NuxtLink>
+      </div>
     </div>
   </div>
   </div>

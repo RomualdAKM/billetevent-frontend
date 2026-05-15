@@ -1,5 +1,5 @@
 <script setup lang="ts">
-definePageMeta({ layout: 'default' })
+definePageMeta({ layout: 'event' })
 
 const route = useRoute()
 const { getEvent } = useEventsApi()
@@ -474,7 +474,7 @@ watchEffect(() => {
           },
           organizer: {
             '@type': 'Organization',
-            name: e.organizer?.name || e.organizer?.first_name,
+            name: e.organizer?.display_name || e.organizer?.name || e.organizer?.first_name,
           },
           offers: e.passes?.length ? {
             '@type': 'AggregateOffer',
@@ -552,7 +552,7 @@ watchEffect(() => {
               </div>
               <div>
                 <div class="text-xs text-text-tertiary mb-0.5">Organisé par</div>
-                <div class="text-sm font-semibold text-text-primary">{{ event?.organizer?.name ?? '' }}</div>
+                <div class="text-sm font-semibold text-text-primary">{{ event?.organizer?.display_name || event?.organizer?.name || '' }}</div>
               </div>
             </div>
             <button v-if="showFollowButton" :disabled="followLoading" class="px-4 py-1.5 rounded-full text-sm font-medium cursor-pointer transition-colors" :class="isFollowing ? 'border border-orange-primary text-orange-primary hover:bg-orange-50' : 'bg-orange-primary text-white hover:bg-orange-600'" @click="toggleFollow">{{ isFollowing ? 'Suivi' : 'Suivre' }}</button>
@@ -935,7 +935,7 @@ watchEffect(() => {
             </div>
             <div>
               <div class="text-xs font-semibold text-text-tertiary mb-0.5">Organisateur</div>
-              <div class="font-serif text-lg text-text-primary leading-tight">{{ event?.organizer?.name ?? '' }}</div>
+              <div class="font-serif text-lg text-text-primary leading-tight">{{ event?.organizer?.display_name || event?.organizer?.name || '' }}</div>
             </div>
           </div>
           <NuxtLink to="/events" class="inline-flex items-center gap-1.5 text-sm font-semibold text-text-secondary border border-border-light px-5 py-2 rounded-full transition-all whitespace-nowrap hover:text-orange-primary hover:border-orange-primary">
@@ -969,15 +969,9 @@ watchEffect(() => {
       </div>
     </section>
 
-    <footer class="bg-white border-t border-border-light py-7 px-10 flex items-center justify-between flex-wrap gap-4 max-md:flex-col max-md:items-center max-md:text-center max-md:px-5 max-sm:py-5 max-sm:px-4">
-      <div class="font-serif text-[1.1rem] text-orange-primary">BilletEvent</div>
-      <p class="text-[0.78rem] text-text-tertiary">&copy; 2025 BilletEvent. Tous droits reserves.</p>
-      <div class="flex gap-5 max-md:flex-wrap max-md:justify-center max-md:gap-3">
-        <NuxtLink to="/legal/cgu" class="text-[0.78rem] text-text-tertiary transition-colors hover:text-orange-primary">CGV</NuxtLink>
-        <NuxtLink to="/legal/mentions" class="text-[0.78rem] text-text-tertiary transition-colors hover:text-orange-primary">Mentions legales</NuxtLink>
-        <NuxtLink to="/#contact" class="text-[0.78rem] text-text-tertiary transition-colors hover:text-orange-primary">Contact</NuxtLink>
-        <NuxtLink to="/#contact" class="text-[0.78rem] text-text-tertiary transition-colors hover:text-orange-primary">Presse</NuxtLink>
-      </div>
+    <footer class="bg-white border-t border-border-light py-8 px-5 text-center">
+      <p class="text-sm text-gray-500 mb-1">{{ event?.organizer?.display_name || event?.organizer?.name || '' }} &copy; {{ new Date().getFullYear() }} All rights reserved.</p>
+      <p class="text-xs text-gray-400">Powered by <a href="https://billetevent.com" target="_blank" rel="noopener" class="text-gray-500 hover:text-gray-700 transition-colors no-underline font-medium">BilletEvent</a></p>
     </footer>
 
     <!-- Lightbox galerie -->
