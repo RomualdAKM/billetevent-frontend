@@ -506,7 +506,7 @@ watchEffect(() => {
 
     <div class="bg-surface border-b border-border-light overflow-x-auto">
       <div class="max-w-[1160px] mx-auto px-10 flex items-center max-md:px-5 max-sm:flex-col max-sm:px-3 max-sm:items-stretch">
-        <div class="inline-flex items-center gap-2 border-r border-border-light px-5 py-3 whitespace-nowrap max-sm:border-r-0 max-sm:border-b max-sm:px-4 max-sm:py-2.5 max-sm:justify-center">
+        <div class="inline-flex items-center gap-2 border-r border-border-light px-5 py-3 whitespace-nowrap max-sm:border-r-0 max-sm:border-b max-sm:px-4 max-sm:py-2.5 max-sm:justify-start">
           <span v-if="event?.event_type === 'enligne'" class="inline-flex items-center gap-1.5 px-3 py-[5px] rounded-full text-[0.73rem] font-bold tracking-wide bg-blue-50 text-blue-600">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10l4.553-2.276A1 1 0 0 1 21 8.618v6.764a1 1 0 0 1-1.447.894L15 14M5 18h8a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2z"/></svg>
             En ligne
@@ -623,8 +623,8 @@ watchEffect(() => {
               <div class="w-24 h-24 rounded-full mb-3.5 shrink-0 overflow-hidden border-[3px] border-border-light bg-[#e8e4dc] max-sm:w-16 max-sm:h-16 max-sm:mb-2.5">
                 <img :src="artist.img" :alt="artist.name" class="w-full h-full object-cover block" loading="lazy" />
               </div>
-              <div class="font-serif text-base text-text-primary mb-1.5 break-words w-full max-sm:text-sm">{{ artist.name }}</div>
-              <div class="inline-block text-xs font-bold tracking-wide uppercase bg-bg-primary text-text-tertiary px-3 py-1 rounded-full max-w-full truncate">{{ artist.role }}</div>
+              <div class="font-serif text-base text-text-primary mb-1.5 break-words w-full leading-snug max-sm:text-sm max-sm:leading-tight">{{ artist.name }}</div>
+              <div class="inline-block text-xs font-bold tracking-wide uppercase bg-bg-primary text-text-tertiary px-3 py-1 rounded-full max-w-full leading-tight truncate">{{ artist.role }}</div>
             </div>
           </div>
         </div>
