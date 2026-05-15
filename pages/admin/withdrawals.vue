@@ -41,7 +41,7 @@ const confirmApprove = async () => {
   if (!approvingId.value) return
   processingId.value = approvingId.value
   try {
-    await api.processWithdrawal(approvingId.value, { status: 'approved' })
+    await api.processWithdrawal(approvingId.value, { decision: 'approved' })
     const idx = withdrawals.value.findIndex((w: any) => w.id === approvingId.value)
     if (idx !== -1) {
       withdrawals.value[idx].status = 'approved'
@@ -66,7 +66,7 @@ const confirmReject = async () => {
   if (!rejectReason.value.trim() || !rejectingId.value) return
   processingId.value = rejectingId.value
   try {
-    await api.processWithdrawal(rejectingId.value, { status: 'rejected', reason: rejectReason.value })
+    await api.processWithdrawal(rejectingId.value, { decision: 'rejected', rejection_reason: rejectReason.value })
     const idx = withdrawals.value.findIndex((w: any) => w.id === rejectingId.value)
     if (idx !== -1) {
       withdrawals.value[idx].status = 'rejected'
