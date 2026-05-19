@@ -122,8 +122,10 @@ const faqItems = [
 
         <div class="flex items-center justify-center">
           <NuxtImg
-            src="~/assets/banner.png"
+            src="/banner.png"
             alt="Billet BilletEvent"
+            :width="380"
+            :height="380"
             class="w-full max-w-[320px] md:max-w-[380px] rounded-lg"
             preload
           />
