@@ -2,6 +2,13 @@
 definePageMeta({ layout: 'default' })
 
 const route = useRoute()
+
+// Keep the marketing landing layout (no BilletEvent navbar/footer) after
+// payment if the buyer arrived via /e/[slug] checkout. The flag is set by
+// PayDunya's return_url and by useCheckout's post-payment navigateTo.
+if (route.query.from === 'landing') {
+  setPageLayout('landing')
+}
 const authStore = useAuthStore()
 const orderId = route.params.id as string
 const api = useAccountApi()

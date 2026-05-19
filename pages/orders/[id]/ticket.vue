@@ -4,6 +4,12 @@ import QRCode from 'qrcode'
 definePageMeta({ layout: 'default' })
 
 const route = useRoute()
+
+// Preserve the chrome-less landing layout for buyers coming from a marketing
+// share link, all the way through to viewing/downloading their ticket.
+if (route.query.from === 'landing') {
+  setPageLayout('landing')
+}
 const authStore = useAuthStore()
 const { info, error: notifyError } = useNotification()
 const { getOrder, getGuestOrder } = useAccountApi()
