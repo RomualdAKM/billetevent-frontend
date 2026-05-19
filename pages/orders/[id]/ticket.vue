@@ -113,24 +113,24 @@ async function downloadPdf(ref?: string) {
   info('Le telechargement du PDF va commencer...')
   try {
     // Guests use the public token-based route; authenticated users go through Sanctum
-    const url = hasGuestToken.value
+    const endpoint = hasGuestToken.value
       ? `/tickets/${targetRef}/guest-download?token=${encodeURIComponent(guestToken.value)}`
       : `/tickets/${targetRef}/download`
     const headers: Record<string, string> = { Accept: 'application/pdf' }
     if (!hasGuestToken.value) {
       headers.Authorization = `Bearer ${localStorage.getItem('auth_token')}`
     }
-    const blob = await $fetch(url, {
+    const blob = await $fetch(endpoint, {
       baseURL: String(config.public.apiBase),
       headers,
       responseType: 'blob',
     })
-    const url = URL.createObjectURL(blob)
+    const objectUrl = URL.createObjectURL(blob)
     const a = document.createElement('a')
-    a.href = url
+    a.href = objectUrl
     a.download = `billet-${targetRef}.pdf`
     a.click()
-    URL.revokeObjectURL(url)
+    URL.revokeObjectURL(objectUrl)
   } catch {
     notifyError('Impossible de telecharger le PDF')
   }
