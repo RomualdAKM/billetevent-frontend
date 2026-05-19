@@ -153,8 +153,13 @@ async function goToCheckout() {
       .filter((p: any) => p.quantity > 0)
       .forEach((p: any) => cartStore.addItem({ id: p.id, name: p.name, price: p.price }, p.quantity))
 
+    // ?from=landing tells the checkout page to stay in landing layout
+    // (no BilletEvent navbar/footer) so the buyer keeps the "dedicated event
+    // page" feel through to payment. Persisted in the URL so it survives
+    // refresh and back/forward navigation.
     await navigateTo({
       path: '/checkout',
+      query: { from: 'landing' },
       state: {
         eventId: event.value.id,
         eventSlug: event.value.slug || null,
@@ -173,6 +178,80 @@ function scrollToTickets() {
   if (typeof document !== 'undefined') {
     document.getElementById('tickets')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
+}
+
+// ── Programme du jour ─────────────────────────────────────────
+const programme = computed(() => {
+  const progs = event.value?.programs ?? []
+  return progs.map((p: any) => ({
+    time: p.start_time ? new Date('1970-01-01T' + p.start_time).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '',
+    title: p.title,
+    sub: p.description ?? '',
+    chip: p.title?.split(' ')[0] ?? '',
+    speaker: p.speaker_name,
+  }))
+})
+
+// ── Artistes & Intervenants ───────────────────────────────────
+const artists = computed(() => {
+  const list = event.value?.artists ?? []
+  if (list.length) {
+    return list.map((a: any) => ({
+      name: a.name,
+      role: a.role ?? '',
+      img: a.image_path ?? '',
+    }))
+  }
+  return (event.value?.programs ?? [])
+    .filter((p: any) => p.speaker_name)
+    .map((p: any) => ({
+      name: p.speaker_name,
+      role: p.title ?? '',
+      img: p.speaker_photo ?? '',
+    }))
+})
+
+// ── Lieu & Accès ──────────────────────────────────────────────
+const mapVisible = ref(false)
+const locationCopied = ref(false)
+const fullAddress = computed(() =>
+  [event.value?.venue || event.value?.location, event.value?.address, event.value?.city, event.value?.country]
+    .filter(Boolean)
+    .join(', '),
+)
+const copyLocation = () => {
+  if (typeof navigator === 'undefined' || !navigator.clipboard) return
+  navigator.clipboard.writeText(fullAddress.value).then(() => {
+    locationCopied.value = true
+    setTimeout(() => { locationCopied.value = false }, 2500)
+  })
+}
+
+// ── Date short helper (multi-day) ─────────────────────────────
+const formatDateShort = (iso: string) => {
+  if (!iso) return ''
+  return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+const isMultiDay = computed(() => {
+  const start = event.value?.date_start
+  const end = event.value?.date_end
+  if (!start || !end) return false
+  return new Date(start).toDateString() !== new Date(end).toDateString()
+})
+
+// ── Galerie / lightbox ────────────────────────────────────────
+const lightboxOpen = ref(false)
+const lightboxIndex = ref(0)
+const openLightbox = (i: number) => { lightboxIndex.value = i; lightboxOpen.value = true }
+const lightboxPrev = () => {
+  const g = event.value?.gallery ?? []
+  if (!g.length) return
+  lightboxIndex.value = (lightboxIndex.value - 1 + g.length) % g.length
+}
+const lightboxNext = () => {
+  const g = event.value?.gallery ?? []
+  if (!g.length) return
+  lightboxIndex.value = (lightboxIndex.value + 1) % g.length
 }
 
 // ── Share ──────────────────────────────────────────────────────
@@ -348,6 +427,187 @@ watchEffect(() => {
       </div>
     </section>
 
+    <!-- ─── PROGRAMME DU JOUR ──────────────────────────────── -->
+    <section v-if="programme.length" class="bg-surface py-12 px-5">
+      <div class="max-w-[720px] mx-auto">
+        <h2 class="font-serif text-[1.6rem] text-text-primary mb-5">Programme du jour</h2>
+        <div class="flex flex-col rounded-xl border border-border-light overflow-hidden">
+          <div v-for="(item, i) in programme" :key="i" class="grid grid-cols-[80px_1fr] items-start gap-4 p-4 border-b border-border-light last:border-b-0 hover:bg-bg-primary transition-colors max-sm:grid-cols-[56px_1fr] max-sm:gap-3">
+            <div class="text-center bg-bg-primary rounded-lg py-2 px-1">
+              <div class="font-serif text-[1.1rem] text-text-primary leading-none max-sm:text-base">{{ item.time || '—' }}</div>
+            </div>
+            <div class="min-w-0">
+              <div class="text-sm font-semibold text-text-primary mb-1">{{ item.title }}</div>
+              <div v-if="item.sub" class="text-xs text-text-tertiary leading-relaxed">{{ item.sub }}</div>
+              <div v-if="item.speaker" class="text-[0.7rem] text-orange-primary uppercase tracking-wider font-bold mt-1.5">{{ item.speaker }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── ARTISTES & INTERVENANTS ────────────────────────── -->
+    <section v-if="artists.length" class="bg-bg-primary py-12 px-5">
+      <div class="max-w-[720px] mx-auto">
+        <h2 class="font-serif text-[1.6rem] text-text-primary mb-5">Artistes &amp; Intervenants</h2>
+        <div class="grid grid-cols-3 gap-4 max-sm:grid-cols-2">
+          <div v-for="(artist, i) in artists" :key="i" class="flex flex-col items-center text-center p-4 border border-border-light rounded-xl bg-surface hover:border-orange-primary transition-colors">
+            <div class="w-20 h-20 rounded-full mb-3 overflow-hidden border-[3px] border-border-light bg-bg-secondary max-sm:w-16 max-sm:h-16">
+              <NuxtImg
+                v-if="artist.img"
+                :src="artist.img"
+                :alt="artist.name"
+                :width="80"
+                :height="80"
+                class="w-full h-full object-cover"
+                loading="lazy"
+              />
+              <div v-else class="w-full h-full flex items-center justify-center text-text-tertiary font-bold">
+                {{ artist.name?.charAt(0).toUpperCase() }}
+              </div>
+            </div>
+            <div class="font-serif text-sm text-text-primary mb-1 leading-snug break-words w-full">{{ artist.name }}</div>
+            <div v-if="artist.role" class="text-[0.7rem] font-bold uppercase tracking-wide text-text-tertiary truncate max-w-full">{{ artist.role }}</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── GALERIE PHOTOS ─────────────────────────────────── -->
+    <section v-if="event?.gallery?.length" class="bg-surface py-12 px-5">
+      <div class="max-w-[1080px] mx-auto">
+        <h2 class="font-serif text-[1.6rem] text-text-primary mb-5">Galerie photos</h2>
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          <button
+            v-for="(img, i) in event.gallery"
+            :key="i"
+            type="button"
+            :aria-label="`Voir la photo ${i + 1}`"
+            class="aspect-[4/3] rounded-xl overflow-hidden cursor-pointer transition-opacity hover:opacity-85 bg-bg-secondary"
+            @click="openLightbox(i)"
+          >
+            <NuxtImg
+              :src="img"
+              :alt="`Photo ${i + 1}`"
+              class="w-full h-full object-cover"
+              loading="lazy"
+              :placeholder="[20, 20]"
+            />
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── INFOS PRATIQUES ────────────────────────────────── -->
+    <section class="bg-bg-primary py-12 px-5">
+      <div class="max-w-[720px] mx-auto">
+        <h2 class="font-serif text-[1.6rem] text-text-primary mb-5">Infos pratiques</h2>
+        <div class="rounded-xl border border-border-light bg-surface overflow-hidden">
+          <div class="flex items-center justify-between px-5 py-4 border-b border-border-light gap-3">
+            <div class="flex items-center gap-2.5">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-text-tertiary shrink-0"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+              <span class="text-sm text-text-tertiary">Accès</span>
+            </div>
+            <span class="text-sm font-bold text-text-primary">{{ event?.is_private ? 'Sur invitation' : 'Ouvert à tous' }}</span>
+          </div>
+          <div class="flex items-center justify-between px-5 py-4 border-b border-border-light gap-3">
+            <div class="flex items-center gap-2.5">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-text-tertiary shrink-0"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              <span class="text-sm text-text-tertiary">Format</span>
+            </div>
+            <span class="text-sm font-bold text-text-primary">{{ event?.event_type === 'enligne' ? 'En ligne' : event?.event_type === 'hybride' ? 'Hybride' : 'Présentiel' }}</span>
+          </div>
+          <div class="flex items-center justify-between px-5 py-4 border-b border-border-light gap-3">
+            <div class="flex items-center gap-2.5">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-text-tertiary shrink-0"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+              <span class="text-sm text-text-tertiary">Billet</span>
+            </div>
+            <span class="text-sm font-bold text-text-primary">Mobile · PDF</span>
+          </div>
+          <div v-if="isMultiDay" class="flex items-center justify-between px-5 py-4 border-b border-border-light gap-3">
+            <div class="flex items-center gap-2.5">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-text-tertiary shrink-0"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <span class="text-sm text-text-tertiary">Dates</span>
+            </div>
+            <span class="text-sm font-bold text-text-primary text-right">Du {{ formatDateShort(event?.date_start) }}<br/>au {{ formatDateShort(event?.date_end) }}</span>
+          </div>
+          <div class="flex items-center justify-between px-5 py-4 gap-3" :class="{ 'border-b border-border-light': event?.online_link && (event?.event_type === 'enligne' || event?.event_type === 'hybride') }">
+            <div class="flex items-center gap-2.5">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-text-tertiary shrink-0"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+              <span class="text-sm text-text-tertiary">Remboursement</span>
+            </div>
+            <span class="text-sm font-bold text-text-primary">{{ event?.refund_policy_label || 'Non remboursable' }}</span>
+          </div>
+          <div v-if="event?.online_link && (event?.event_type === 'enligne' || event?.event_type === 'hybride')" class="flex items-start gap-3 px-5 py-4">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-text-tertiary shrink-0 mt-0.5"><path d="M15 10l4.553-2.276A1 1 0 0 1 21 8.618v6.764a1 1 0 0 1-1.447.894L15 14M5 18h8a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2z"/></svg>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium text-text-primary">{{ event.online_platform || 'Événement en ligne' }}</div>
+              <a :href="event.online_link" target="_blank" rel="noopener" class="text-sm text-orange-primary hover:underline break-all">{{ event.online_link }}</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── LIEU & ACCÈS ───────────────────────────────────── -->
+    <section class="bg-surface py-12 px-5">
+      <div class="max-w-[720px] mx-auto">
+        <h2 class="font-serif text-[1.6rem] text-text-primary mb-5">Lieu &amp; Accès</h2>
+        <div class="rounded-xl overflow-hidden border border-border-light">
+          <div v-if="event?.latitude && event?.longitude" class="w-full h-[220px] max-sm:h-[160px]">
+            <iframe
+              v-if="mapVisible"
+              :src="`https://www.openstreetmap.org/export/embed.html?bbox=${event.longitude-0.01},${event.latitude-0.01},${event.longitude+0.01},${event.latitude+0.01}&layer=mapnik&marker=${event.latitude},${event.longitude}`"
+              class="w-full h-full border-0"
+              loading="lazy"
+              title="Carte du lieu"
+            ></iframe>
+            <button
+              v-else
+              type="button"
+              class="w-full h-full bg-bg-primary flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-bg-secondary transition-colors"
+              @click="mapVisible = true"
+            >
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-text-tertiary"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              <span class="text-sm font-medium text-text-secondary">Afficher la carte</span>
+              <span class="text-xs text-text-tertiary">Cliquez pour charger</span>
+            </button>
+          </div>
+          <div class="p-5 flex flex-col gap-3.5 bg-bg-primary">
+            <div class="font-serif text-[1.1rem] text-text-primary">{{ event?.venue || event?.location || '' }}</div>
+            <div class="text-sm text-text-secondary leading-relaxed border-l-[3px] border-orange-primary pl-3">{{ event?.address ?? '' }}<br/>{{ [event?.city, event?.country].filter(Boolean).join(', ') }}</div>
+            <div v-if="event?.transport_options?.length" class="flex gap-2 flex-wrap">
+              <span v-for="opt in event.transport_options" :key="opt" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface border border-border-light text-xs font-semibold text-text-secondary">{{ opt }}</span>
+            </div>
+            <div v-if="event?.access_instructions" class="mt-2">
+              <h4 class="text-sm font-semibold text-text-primary mb-2">Comment accéder</h4>
+              <p class="text-sm text-text-secondary leading-relaxed whitespace-pre-line">{{ event.access_instructions }}</p>
+            </div>
+            <div class="flex gap-2.5 flex-wrap mt-2">
+              <a v-if="event?.latitude && event?.longitude" :href="`https://www.google.com/maps?q=${event.latitude},${event.longitude}`" target="_blank" rel="noopener" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-orange-primary text-white text-sm font-bold no-underline hover:bg-orange-light transition-colors">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                Voir sur Google Maps
+              </a>
+              <a v-else :href="`https://maps.google.com/?q=${encodeURIComponent(fullAddress)}`" target="_blank" rel="noopener" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-orange-primary text-white text-sm font-bold no-underline hover:bg-orange-light transition-colors">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                Ouvrir dans Google Maps
+              </a>
+              <button
+                type="button"
+                class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-surface border-[1.5px] text-sm font-bold transition-colors"
+                :class="locationCopied ? 'border-green-dark text-green-dark' : 'border-border-light text-text-secondary hover:border-orange-primary hover:text-orange-primary'"
+                @click="copyLocation"
+              >
+                <svg v-if="!locationCopied" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                {{ locationCopied ? 'Copié !' : 'Copier l\'adresse' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- ─── TICKETS ────────────────────────────────────────── -->
     <section id="tickets" class="bg-surface py-12 px-5 scroll-mt-24" v-if="!isPast">
       <div class="max-w-[720px] mx-auto">
@@ -506,5 +766,52 @@ watchEffect(() => {
         </template>
       </button>
     </div>
+
+    <!-- ─── Lightbox galerie ───────────────────────────────── -->
+    <Teleport to="body">
+      <div
+        v-if="lightboxOpen && event?.gallery?.length"
+        role="dialog"
+        aria-modal="true"
+        tabindex="0"
+        class="fixed inset-0 z-[500] bg-black/90 flex items-center justify-center p-4"
+        @click.self="lightboxOpen = false"
+        @keydown.esc="lightboxOpen = false"
+      >
+        <button
+          type="button"
+          aria-label="Fermer"
+          class="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white text-2xl transition-colors cursor-pointer border-none z-10"
+          @click="lightboxOpen = false"
+        >&times;</button>
+        <button
+          v-if="event.gallery.length > 1"
+          type="button"
+          aria-label="Photo précédente"
+          class="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors cursor-pointer border-none z-10"
+          @click.stop="lightboxPrev"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <button
+          v-if="event.gallery.length > 1"
+          type="button"
+          aria-label="Photo suivante"
+          class="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors cursor-pointer border-none z-10"
+          @click.stop="lightboxNext"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+        <NuxtImg
+          :src="event.gallery[lightboxIndex]"
+          :alt="`Photo ${lightboxIndex + 1}`"
+          class="max-w-full max-h-[90vh] rounded-lg object-contain"
+          :placeholder="[20, 20]"
+        />
+        <div v-if="event.gallery.length > 1" class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 backdrop-blur-sm text-white/70 text-xs font-medium px-3 py-1.5 rounded-full">
+          {{ lightboxIndex + 1 }} / {{ event.gallery.length }}
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>

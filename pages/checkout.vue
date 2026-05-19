@@ -1,6 +1,16 @@
 <script setup lang="ts">
 definePageMeta({ layout: 'default' })
 
+const route = useRoute()
+
+// Buyers coming from the marketing landing (/e/[slug]?from=landing) should
+// keep the chrome-less BilletEvent-free feel through to payment. We swap
+// the layout dynamically when ?from=landing is present.
+const fromLanding = computed(() => route.query.from === 'landing')
+if (fromLanding.value) {
+  setPageLayout('landing')
+}
+
 const {
   eventId,
   eventSlug,
@@ -78,7 +88,10 @@ onMounted(async () => {
 
 const eventLink = computed(() => {
   const slug = eventSlug.value
-  return slug ? `/events/${slug}` : (eventId.value ? `/events/${eventId.value}` : '/events')
+  // Send the buyer back where they came from: the marketing landing if they
+  // arrived via /e/[slug], or the regular event page otherwise.
+  const base = fromLanding.value ? '/e/' : '/events/'
+  return slug ? base + slug : (eventId.value ? base + eventId.value : '/events')
 })
 
 const countryOptions = computed(() =>

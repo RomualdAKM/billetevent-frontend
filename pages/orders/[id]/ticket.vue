@@ -97,8 +97,18 @@ async function loadOrder() {
       }
     }
     tickets.value = allTickets
-  } catch {
-    notifyError('Impossible de charger la commande')
+  } catch (err: any) {
+    // 401: session expired → kick to login with redirect back here
+    // 404: order doesn't exist or token invalid → show error page
+    if (err?.status === 401 && !hasGuestToken.value) {
+      await navigateTo({ path: '/auth/login', query: { redirect: route.path } })
+      return
+    }
+    if (err?.status === 404) {
+      showError({ statusCode: 404, statusMessage: 'Billet introuvable ou lien expiré' })
+      return
+    }
+    notifyError(err?.message || 'Impossible de charger la commande')
   } finally {
     loading.value = false
   }

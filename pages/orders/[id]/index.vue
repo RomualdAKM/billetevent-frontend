@@ -77,6 +77,10 @@ const loadOrder = async () => {
     order.value = res?.data ?? res
     if (order.value?.status === 'pending') startPolling()
     maybeTrackPurchase()
+    // Order is now persisted server-side — safe to clear the local cart so
+    // it doesn't reappear if the buyer browses back to /checkout
+    const cartStore = useCartStore()
+    cartStore.clearCart()
   } catch {
     showError({ statusCode: 404, statusMessage: 'Commande introuvable' })
   } finally {
@@ -89,7 +93,9 @@ async function maybeTrackPurchase() {
   if (purchaseTracked.value || order.value?.status !== 'paid') return
   purchaseTracked.value = true
   try {
-    const orgId = order.value?.event?.user_id || order.value?.event?.organizer_id
+    // EventResource exposes `event.organizer.id`, NOT `event.user_id` or
+    // `event.organizer_id` — that path was wrong and pixels never fired.
+    const orgId = order.value?.event?.organizer?.id
     if (orgId) {
       await initPixels(orgId)
       trackPurchase({

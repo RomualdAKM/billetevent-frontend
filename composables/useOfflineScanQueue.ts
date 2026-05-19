@@ -15,7 +15,10 @@ const STORAGE_KEY = 'validator_offline_scan_queue_v1'
  * connectivity returns.
  */
 export const useOfflineScanQueue = () => {
-  const isOnline = ref(true)
+  // Read navigator.onLine synchronously when available. Starting at `true`
+  // makes the "En ligne" badge flash green on mount even if the device is
+  // already offline; reading the actual value avoids that flicker.
+  const isOnline = ref(typeof navigator !== 'undefined' ? navigator.onLine : true)
   const queue = ref<QueuedScan[]>([])
   const flushing = ref(false)
 

@@ -31,7 +31,7 @@ const handleLogin = async () => {
     loading.value = true
     const response = await login({ email: email.value, password: password.value })
     authStore.setAuth(response.user as Record<string, unknown>, response.token)
-    await authStore.fetchUser()
+    // `login` already returns the user — no need for a follow-up /auth/me call
     success('Connexion réussie !')
     await navigateTo(getSafeRedirect(route.query.redirect))
   } catch (err: any) {

@@ -254,6 +254,17 @@ export const useCheckout = () => {
       payload.promo_code = cartStore.promoCode
     }
 
+    // Signal to backend that the buyer is in the marketing landing flow
+    // (no BilletEvent chrome). Backend uses this to:
+    //   - append ?from=landing to the guest_view_url (success / pending)
+    //   - append ?from=landing to the PayDunya return_url
+    if (import.meta.client && typeof window !== 'undefined') {
+      const url = new URL(window.location.href)
+      if (url.searchParams.get('from') === 'landing') {
+        (payload as any).from_landing = true
+      }
+    }
+
     // Include registration data for inscription / free events
     if (isInscription.value || isFreeEvent.value) {
       if (registrationData.value.guest_name) payload.guest_name = registrationData.value.guest_name
@@ -300,8 +311,10 @@ export const useCheckout = () => {
     if (data.payment_status === 'pending' || payment.status === 'pending') {
       paymentState.value = 'pending'
       pendingMessage.value = 'Veuillez valider le paiement sur votre téléphone. Vérifiez vos notifications.'
-      // Order exists server-side and is waiting for the buyer's confirmation in their mobile app
-      cartStore.clearCart()
+      // Keep the cart populated while the buyer confirms on their phone —
+      // clearing it now makes the page flash "Votre panier est vide" before
+      // the pending state takes over. The cart is cleared on the order
+      // confirmation page (/orders/REF) instead.
       return
     }
 
@@ -309,7 +322,11 @@ export const useCheckout = () => {
     notifySuccess('Paiement effectué avec succès !')
     cartStore.clearCart()
     // Guests get a signed URL so they can land on the confirmation page without a session
-    const target = (data as any).guest_view_url || `/orders/${data.reference || data.order_id}`
+    let target = (data as any).guest_view_url || `/orders/${data.reference || data.order_id}`
+    // Preserve the landing layout flag through to the order confirmation
+    if (import.meta.client && new URL(window.location.href).searchParams.get('from') === 'landing') {
+      target += (target.includes('?') ? '&' : '?') + 'from=landing'
+    }
     navigateTo(target)
   }
 
