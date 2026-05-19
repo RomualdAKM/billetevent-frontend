@@ -4,6 +4,12 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
   modules: ['@pinia/nuxt', '@nuxt/fonts', '@nuxt/image'],
+  // Nuxt scans composables/ at depth 1 by default. The composables/api/
+  // subdirectory holds useEventsApi, usePublicApi, useAuthApi, useAccountApi,
+  // useCheckoutApi, etc. — explicitly list it so they are auto-imported.
+  imports: {
+    dirs: ['composables/api'],
+  },
   css: ['~/assets/css/main.css'],
   vite: {
     plugins: [tailwindcss()],
