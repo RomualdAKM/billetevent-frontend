@@ -415,8 +415,9 @@ const confirmPublish = async () => {
     selectedEvent.value.badgeVariant = 'success'
     selectedEvent.value.isDraft = false
     success(`"${selectedEvent.value.title}" a été publié avec succès`)
-  } catch {
-    notifyError('Impossible de publier l\'\u00e9vénement')
+  } catch (err: any) {
+    // Surface the specific reason from EventPolicy (KYC missing, no passes, etc.)
+    notifyError(err?.message || 'Impossible de publier l\'\u00e9vénement')
   } finally {
     actionLoading.value = false
     publishModalOpen.value = false

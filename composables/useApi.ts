@@ -21,7 +21,14 @@ export const useApi = () => {
     const status = err?.response?.status || err?.status
 
     if (status === 401) {
-      if (import.meta.client) {
+      // Distinguish bad credentials (login/register/verify) from expired
+      // session (every other authenticated endpoint). For auth attempts the
+      // caller will display its own message ("Email ou mot de passe incorrect")
+      // — we must NOT show "Session expirée" or boot them to /auth/login.
+      const requestUrl = String(err?.request || err?.response?.url || '')
+      const isAuthAttempt = /\/auth\//.test(requestUrl)
+
+      if (!isAuthAttempt && import.meta.client) {
         const { error: notifyError } = useNotification()
         notifyError('Session expirée, veuillez vous reconnecter')
         localStorage.removeItem('auth_token')
@@ -33,7 +40,10 @@ export const useApi = () => {
         }
         navigateTo(target)
       }
-      throw err
+      // Normalise the error so callers see the backend message, not the raw
+      // fetch error (which has `message = '[POST] "https://..." 401'`).
+      const data = err?.response?._data || err?.data
+      throw { status: 401, message: data?.message || 'Identifiants invalides', data }
     }
 
     if (status === 422) {
@@ -49,10 +59,19 @@ export const useApi = () => {
     if (status === 500) {
       const { error: notifyError } = useNotification()
       notifyError('Une erreur serveur est survenue. Veuillez réessayer.')
-      throw err
+      const data = err?.response?._data || err?.data
+      throw { status: 500, message: data?.message || 'Erreur serveur', data }
     }
 
-    throw err
+    // Any other status: normalise to hide the raw fetch error (which embeds
+    // the URL in .message). Default to a clean French message if backend
+    // didn't provide one.
+    const data = err?.response?._data || err?.data
+    throw {
+      status: status || 0,
+      message: data?.message || 'Une erreur est survenue. Veuillez réessayer.',
+      data,
+    }
   }
 
   const request = async <T = any>(url: string, options: any = {}): Promise<T> => {
@@ -69,7 +88,8 @@ export const useApi = () => {
       if (err?.name === 'AbortError') {
         const { error: notifyError } = useNotification()
         notifyError('La requête a expiré. Vérifiez votre connexion.')
-        throw err
+        // Normalised shape so callers never see the raw fetch URL in .message
+        throw { status: 0, message: 'La requête a expiré. Vérifiez votre connexion.' }
       }
       return handleError(err)
     } finally {

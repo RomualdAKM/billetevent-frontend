@@ -38,14 +38,16 @@ const handleLogin = async () => {
     if (err?.status === 422 && err?.errors) {
       if (err.errors.email) errors.value.email = err.errors.email[0]
       if (err.errors.password) errors.value.password = err.errors.password[0]
-    } else if (err?.response?.status === 403 || err?.status === 403) {
-      const msg = err?.message || err?.data?.message || err?.response?._data?.message || 'Veuillez vérifier votre email'
-      notifyError(msg)
+    } else if (err?.status === 403) {
+      // OTP verification still pending — redirect to verify-otp page
+      notifyError(err?.message || 'Veuillez vérifier votre email')
       const otpQuery: Record<string, string> = { email: email.value }
       if (typeof route.query.redirect === 'string') otpQuery.redirect = route.query.redirect
       await navigateTo({ path: '/auth/verify-otp', query: otpQuery })
     } else {
-      notifyError(err?.message || err?.data?.message || 'Email ou mot de passe incorrect')
+      // 401 / network / anything else — useApi has already normalised the
+      // shape, so err.message is the backend message (no fetch URL leak)
+      notifyError(err?.message || 'Email ou mot de passe incorrect')
     }
   } finally {
     loading.value = false
