@@ -1,10 +1,13 @@
 <script setup lang="ts">
 definePageMeta({ layout: 'auth', middleware: 'guest' })
 
+const route = useRoute()
 const { forgotPassword } = useAuthApi()
 const { success, error: notifyError } = useNotification()
 
-const email = ref('')
+// Pre-fill from ?email=... so that the GuestAccountWelcome mail link drops
+// users straight into "send me a reset email"
+const email = ref(typeof route.query.email === 'string' ? route.query.email : '')
 const emailError = ref('')
 const loading = ref(false)
 const sent = ref(false)
@@ -41,7 +44,7 @@ const handleForgotPassword = async () => {
   <div class="contents">
   <AuthAuthPanel />
   <div class="flex-1 flex items-center justify-center px-6 py-10 lg:px-12 bg-bg-primary">
-    <div class="w-full max-w-[480px] bg-surface rounded-[20px] border border-border-light px-10 py-11 ">
+    <form @submit.prevent="handleForgotPassword" class="w-full max-w-[480px] bg-surface rounded-[20px] border border-border-light px-10 py-11 ">
       <NuxtLink to="/auth/login" class="inline-flex items-center gap-1.5 text-[0.78rem] text-text-tertiary mb-5">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
         Retour à la connexion
@@ -63,13 +66,13 @@ const handleForgotPassword = async () => {
           <label class="block text-[0.78rem] font-semibold text-text-secondary mb-1.5 tracking-[0.01em]">
             Adresse email <span class="text-orange-primary ml-0.5">*</span>
           </label>
-          <input v-model="email" type="email" placeholder="you@example.com" class="w-full px-3.5 py-2.5 border-[1.5px] rounded-lg font-sans text-[0.87rem] text-text-primary bg-surface outline-none placeholder:text-text-tertiary focus:border-orange-primary transition-colors" :class="emailError ? 'border-red-error' : 'border-border-light'" @input="emailError = ''" @keyup.enter="handleForgotPassword" />
+          <input v-model="email" type="email" autocomplete="email" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" autofocus placeholder="you@example.com" class="w-full px-3.5 py-2.5 border-[1.5px] rounded-lg font-sans text-[0.87rem] text-text-primary bg-surface outline-none placeholder:text-text-tertiary focus:border-orange-primary transition-colors" :class="emailError ? 'border-red-error' : 'border-border-light'" @input="emailError = ''" />
           <p v-if="emailError" class="text-[0.75rem] text-red-error mt-1">{{ emailError }}</p>
         </div>
         <button
+          type="submit"
           :disabled="loading"
           class="w-full py-3 bg-orange-primary text-white rounded-lg border-none text-[0.9rem] font-bold font-sans flex items-center justify-center gap-2 mt-2 hover:bg-orange-light transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-          @click="handleForgotPassword"
         >
           <svg v-if="!loading" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
           <svg v-else class="animate-spin" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10" stroke-opacity="0.3"/><path d="M12 2a10 10 0 0 1 10 10"/></svg>
@@ -77,7 +80,7 @@ const handleForgotPassword = async () => {
         </button>
       </template>
       <template v-else>
-        <button class="w-full py-3 bg-orange-primary text-white rounded-lg border-none text-[0.9rem] font-bold font-sans flex items-center justify-center gap-2 mt-2 hover:bg-orange-light transition-colors" @click="sent = false">
+        <button type="button" class="w-full py-3 bg-orange-primary text-white rounded-lg border-none text-[0.9rem] font-bold font-sans flex items-center justify-center gap-2 mt-2 hover:bg-orange-light transition-colors" @click="sent = false">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
           Renvoyer l'email
         </button>
@@ -87,7 +90,7 @@ const handleForgotPassword = async () => {
           Retour à l'accueil
         </NuxtLink>
       </div>
-    </div>
+    </form>
   </div>
   </div>
 </template>

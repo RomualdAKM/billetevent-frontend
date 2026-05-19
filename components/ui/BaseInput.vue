@@ -13,6 +13,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{ 'update:modelValue': [value: string | number] }>()
 
+defineOptions({ inheritAttrs: false })
+
 function onInput(e: Event) {
   emit('update:modelValue', (e.target as HTMLInputElement).value)
 }
@@ -31,6 +33,7 @@ function onInput(e: Event) {
         class="inline-flex items-center px-3 py-2.5 border border-r-0 border-border-light rounded-l-lg bg-surface-2 text-sm text-text-secondary shrink-0"
       >{{ prefix }}</span>
       <input
+        v-bind="$attrs"
         :type="type ?? 'text'"
         :value="modelValue"
         :placeholder="placeholder"

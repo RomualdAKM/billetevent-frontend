@@ -46,6 +46,13 @@ const cancelDisable = () => {
   pendingToggle.value = null
 }
 
+const methodsTableColumns = [
+  { key: 'operator', label: 'Opérateur' },
+  { key: 'country', label: 'Pays', hideOnMobile: true },
+  { key: 'gateway', label: 'Gateway', hideOnMobile: true },
+  { key: 'status', label: 'Statut', class: 'text-center' },
+]
+
 const loadMethods = async () => {
   loading.value = true
   try {
@@ -76,39 +83,37 @@ onMounted(loadMethods)
       <p class="text-sm text-text-secondary">Activez ou désactivez les méthodes de paiement disponibles</p>
     </div>
 
-    <div class="bg-surface border border-border-light rounded-xl overflow-hidden">
-      <div class="overflow-x-auto">
-        <table class="w-full">
-          <thead>
-            <tr class="border-b border-border-light">
-              <th class="text-left text-xs font-semibold text-text-tertiary uppercase tracking-wide px-4 py-3">Opérateur</th>
-              <th class="text-left text-xs font-semibold text-text-tertiary uppercase tracking-wide px-4 py-3">Pays</th>
-              <th class="text-left text-xs font-semibold text-text-tertiary uppercase tracking-wide px-4 py-3">Gateway</th>
-              <th class="text-center text-xs font-semibold text-text-tertiary uppercase tracking-wide px-4 py-3">Statut</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="m in methods" :key="m.id" class="border-b border-border-light last:border-b-0">
-              <td class="px-4 py-3 text-sm font-medium text-text-primary">{{ m.operator }}</td>
-              <td class="px-4 py-3 text-sm text-text-secondary">{{ m.country }}</td>
-              <td class="px-4 py-3 text-sm text-text-secondary">{{ m.gateway }}</td>
-              <td class="px-4 py-3 text-center">
-                <button
-                  class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 cursor-pointer border-none"
-                  :class="m.active ? 'bg-green-dark' : 'bg-border-medium'"
-                  @click="handleToggle(m)"
-                >
-                  <span
-                    class="inline-block h-4 w-4 rounded-full bg-white transition-transform duration-200"
-                    :class="m.active ? 'translate-x-6' : 'translate-x-1'"
-                  />
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <UiDataTable
+      :columns="methodsTableColumns"
+      :rows="methods"
+      :loading="loading"
+      empty-title="Aucune méthode de paiement"
+      empty-description="Il n'y a aucune méthode de paiement configurée."
+    >
+      <template #cell-operator="{ row }">
+        <span class="text-sm font-medium text-text-primary">{{ row.operator }}</span>
+      </template>
+      <template #cell-country="{ row }">
+        <span class="text-sm text-text-secondary">{{ row.country }}</span>
+      </template>
+      <template #cell-gateway="{ row }">
+        <span class="text-sm text-text-secondary">{{ row.gateway }}</span>
+      </template>
+      <template #cell-status="{ row }">
+        <div class="text-center">
+          <button
+            class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 cursor-pointer border-none"
+            :class="row.active ? 'bg-green-dark' : 'bg-border-medium'"
+            @click="handleToggle(row)"
+          >
+            <span
+              class="inline-block h-4 w-4 rounded-full bg-white transition-transform duration-200"
+              :class="row.active ? 'translate-x-6' : 'translate-x-1'"
+            />
+          </button>
+        </div>
+      </template>
+    </UiDataTable>
 
     <UiConfirmModal
       :is-open="showConfirmModal"

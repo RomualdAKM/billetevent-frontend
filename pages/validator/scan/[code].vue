@@ -1,7 +1,29 @@
 <template>
   <div class="min-h-screen flex flex-col bg-bg-primary">
     <header class="sticky top-0 z-50 bg-white px-4 py-3 flex items-center justify-between gap-3">
-      <img src="/logo.png" alt="BilletEvent" class="h-8" />
+      <div class="flex items-center gap-3 min-w-0">
+        <img src="/logo.png" alt="BilletEvent" class="h-8 shrink-0" />
+        <span
+          :class="[
+            'inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-2 py-1 whitespace-nowrap',
+            offline.isOnline.value
+              ? 'bg-green-dim text-green-dark'
+              : 'bg-red-error/10 text-red-error',
+          ]"
+          :aria-label="offline.isOnline.value ? 'Connecté' : 'Hors ligne'"
+        >
+          <span :class="['w-1.5 h-1.5 rounded-full', offline.isOnline.value ? 'bg-green-dark' : 'bg-red-error animate-pulse']" />
+          {{ offline.isOnline.value ? 'En ligne' : 'Hors ligne' }}
+        </span>
+        <span
+          v-if="offline.queue.value.length > 0"
+          class="inline-flex items-center gap-1 text-xs font-medium text-gold bg-gold-dim rounded-full px-2 py-1 whitespace-nowrap"
+          :title="`${offline.queue.value.length} scan(s) en attente de synchronisation`"
+        >
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          {{ offline.queue.value.length }} en attente
+        </span>
+      </div>
       <div class="flex items-center gap-2">
         <button
           class="border border-border-light rounded-lg px-4 py-2 text-sm font-sans cursor-pointer transition-all duration-150 hover:bg-surface-2 flex items-center gap-2 text-text-primary"
@@ -13,7 +35,7 @@
         </button>
         <button
           class="text-red-error border border-red-error rounded-lg px-4 py-2 text-sm font-sans cursor-pointer transition-all duration-150 hover:bg-red-dim"
-          @click="navigateTo(`/validator/login/${route.params.code}`)"
+          @click="handleValidatorLogout"
         >Déconnexion</button>
       </div>
     </header>
@@ -149,7 +171,8 @@ definePageMeta({ layout: 'validator' })
 
 const route = useRoute()
 const api = useValidatorApi()
-const { error: notifyError } = useNotification()
+const { error: notifyError, success: notifySuccess, info: notifyInfo } = useNotification()
+const offline = useOfflineScanQueue()
 
 const mode = ref<'scan' | 'manual'>('scan')
 const cameraActive = ref(true)
@@ -182,6 +205,7 @@ const getResultConfig = (result: string | null) => {
     valid: { bg: 'bg-green-dim', iconBg: 'bg-white', textColor: 'text-green-dark', title: 'BILLET VALIDE' },
     invalid: { bg: 'bg-red-error/10', iconBg: 'bg-white', textColor: 'text-red-error', title: 'BILLET INVALIDE' },
     used: { bg: 'bg-orange-dim', iconBg: 'bg-white', textColor: 'text-gold', title: 'D\u00c9J\u00c0 UTILIS\u00c9' },
+    pending_sync: { bg: 'bg-gold-dim', iconBg: 'bg-white', textColor: 'text-gold', title: '\u00c0 CONFIRMER (HORS LIGNE)' },
   }
   return configs[result || ''] || configs.valid
 }
@@ -212,10 +236,62 @@ const mapScanStatus = (response: any): string => {
   return 'invalid'
 }
 
+/** Light haptic + audio feedback so the agent notices the result in a noisy room. */
+const buzz = (pattern: number | number[]) => {
+  if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+    try { navigator.vibrate(pattern) } catch { /* unsupported */ }
+  }
+}
+
+/** Sends a queued scan to the API; called by the offline queue when network returns. */
+const sendQueuedScan = async (item: { type: 'qr' | 'manual'; payload: { qr_data?: string; ticket_reference?: string } }) => {
+  if (item.type === 'qr' && item.payload.qr_data) {
+    await api.scan({ qr_data: item.payload.qr_data })
+  } else if (item.type === 'manual' && item.payload.ticket_reference) {
+    await api.manualValidate({ ticket_reference: item.payload.ticket_reference })
+  }
+}
+
+/** True for "network down" errors (fetch abort, no connectivity, timeout). */
+const isNetworkError = (err: any): boolean => {
+  if (!err) return false
+  if (typeof navigator !== 'undefined' && !navigator.onLine) return true
+  const status = err?.response?.status || err?.status
+  // Validation/auth/etc. failures from the backend are NOT network errors
+  if (typeof status === 'number' && status >= 400 && status < 600) return false
+  const name = err?.name || ''
+  const message = (err?.message || '').toLowerCase()
+  return name === 'AbortError'
+    || name === 'TypeError'
+    || message.includes('network')
+    || message.includes('fetch')
+    || message.includes('timeout')
+}
+
 const handleCameraScan = async (data: string) => {
   cameraActive.value = false
   scanResult.value = null
   lastScanData.value = null
+
+  const resetAfter = () => setTimeout(() => {
+    scanResult.value = null
+    lastScanData.value = null
+    cameraActive.value = true
+  }, 3000)
+
+  // Offline path: queue locally and tell the agent the scan is unverified.
+  // We MUST NOT show "valid" — we have no way to know if the ticket exists,
+  // was already scanned, or is invalid. The agent must use their judgement.
+  if (!offline.isOnline.value) {
+    offline.enqueue({ type: 'qr', payload: { qr_data: data } })
+    scanResult.value = 'pending_sync'
+    lastScanData.value = { offline: true } as any
+    buzz([120, 60, 120])
+    notifyInfo('Hors ligne — à vérifier après synchronisation')
+    resetAfter()
+    return
+  }
+
   try {
     const response = await api.scan({ qr_data: data })
     const responseData = response?.data || response
@@ -226,19 +302,26 @@ const handleCameraScan = async (data: string) => {
       scanned_at: responseData?.first_scan_at || responseData?.scanned_at || null,
     }
     scanResult.value = mapScanStatus(response)
+    // Haptic feedback: short for valid, long+long for duplicate, short+pause+short for invalid
+    if (scanResult.value === 'valid') buzz(80)
+    else if (scanResult.value === 'used') buzz([200, 100, 200])
+    else buzz([80, 80, 80])
     await loadStats()
-    setTimeout(() => {
-      scanResult.value = null
-      lastScanData.value = null
-      cameraActive.value = true
-    }, 3000)
+    resetAfter()
   } catch (err: any) {
-    scanResult.value = 'invalid'
-    notifyError(err?.message || err?.data?.message || 'Erreur lors du scan')
-    setTimeout(() => {
-      scanResult.value = null
-      cameraActive.value = true
-    }, 3000)
+    // Network error → queue and report success locally; real error → show invalid
+    if (isNetworkError(err)) {
+      offline.enqueue({ type: 'qr', payload: { qr_data: data } })
+      scanResult.value = 'pending_sync'
+      lastScanData.value = { offline: true } as any
+      buzz([120, 60, 120])
+      notifyInfo('Réseau indisponible — scan à vérifier après synchronisation')
+    } else {
+      scanResult.value = 'invalid'
+      buzz([80, 80, 80])
+      notifyError(err?.message || err?.data?.message || 'Erreur lors du scan')
+    }
+    resetAfter()
   }
 }
 
@@ -258,6 +341,16 @@ const handleManualSearch = async () => {
       return
     }
 
+    // Offline: queue and mark as unverified (the ticket may not even exist)
+    if (!offline.isOnline.value) {
+      offline.enqueue({ type: 'manual', payload: { ticket_reference: reference } })
+      manualResult.value = 'pending_sync'
+      lastManualData.value = { reference, offline: true } as any
+      buzz([120, 60, 120])
+      notifyInfo('Hors ligne — à vérifier après synchronisation')
+      return
+    }
+
     const response = await api.manualValidate({ ticket_reference: reference })
     const data = response?.data || response
     const status = mapScanStatus(response)
@@ -268,14 +361,43 @@ const handleManualSearch = async () => {
       scanned_at: data?.first_scan_at || data?.scanned_at || null,
     }
     manualResult.value = status
+    if (status === 'valid') buzz(80)
+    else if (status === 'used') buzz([200, 100, 200])
+    else buzz([80, 80, 80])
     await loadStats()
   } catch (err: any) {
-    manualResult.value = 'invalid'
-    notifyError(err?.message || err?.data?.message || 'Billet introuvable')
+    if (isNetworkError(err)) {
+      offline.enqueue({ type: 'manual', payload: { ticket_reference: manualForm.value.ticket.trim() } })
+      manualResult.value = 'pending_sync'
+      lastManualData.value = { reference: manualForm.value.ticket.trim(), offline: true } as any
+      buzz([120, 60, 120])
+      notifyInfo('Réseau indisponible — à vérifier après synchronisation')
+    } else {
+      manualResult.value = 'invalid'
+      buzz([80, 80, 80])
+      notifyError(err?.message || err?.data?.message || 'Billet introuvable')
+    }
   } finally {
     searching.value = false
   }
 }
+
+// Auto-sync pending scans whenever connectivity returns
+const syncOfflineQueue = async () => {
+  if (!offline.isOnline.value || offline.queue.value.length === 0) return
+  const before = offline.queue.value.length
+  await offline.flush(sendQueuedScan)
+  const after = offline.queue.value.length
+  const synced = before - after
+  if (synced > 0) {
+    notifySuccess(`${synced} scan${synced > 1 ? 's' : ''} synchronisé${synced > 1 ? 's' : ''}`)
+    await loadStats()
+  }
+}
+
+watch(() => offline.isOnline.value, (online) => {
+  if (online) syncOfflineQueue()
+})
 
 onMounted(() => {
   if (!localStorage.getItem('validator_token')) {
@@ -283,5 +405,24 @@ onMounted(() => {
     return
   }
   loadStats()
+  // Replay anything that piled up while the page wasn't mounted
+  syncOfflineQueue()
 })
+
+/**
+ * Validator logout — drops the session token AND wipes the offline scan queue
+ * so the next person logging in on the same device can't replay scans they
+ * never made (queue persists in localStorage across sessions otherwise).
+ */
+const handleValidatorLogout = async () => {
+  // Try to flush any pending scans one last time before walking away
+  if (offline.isOnline.value && offline.queue.value.length > 0) {
+    try { await offline.flush(sendQueuedScan) } catch { /* offline or server down */ }
+  }
+  if (typeof localStorage !== 'undefined') {
+    localStorage.removeItem('validator_token')
+    localStorage.removeItem('validator_offline_scan_queue_v1')
+  }
+  navigateTo(`/validator/login/${route.params.code}`)
+}
 </script>

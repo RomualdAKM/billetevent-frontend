@@ -235,6 +235,9 @@ const youtubeEmbedUrl = computed(() => {
 })
 
 const locationCopied = ref(false)
+// The embed iframe is loaded only after explicit user action — saves a
+// non-trivial 3rd-party request on the critical event page (esp. on 3G).
+const mapVisible = ref(false)
 const linkCopied = ref(false)
 function copyLocation() {
   const addr = [event.value?.address, event.value?.city, event.value?.country].filter(Boolean).join(', ')
@@ -315,8 +318,11 @@ function decreaseQty(ticket: any) {
   }
 }
 function increaseQty(ticket: any) {
-  if ((ticketQuantities.value[ticket.id] ?? 0) < 10) {
-    ticketQuantities.value[ticket.id] = (ticketQuantities.value[ticket.id] ?? 0) + 1
+  const current = ticketQuantities.value[ticket.id] ?? 0
+  const maxPerOrder = 10
+  const stockCap = typeof ticket.remaining === 'number' ? ticket.remaining : Number.POSITIVE_INFINITY
+  if (current < maxPerOrder && current < stockCap) {
+    ticketQuantities.value[ticket.id] = current + 1
   }
 }
 
@@ -350,28 +356,9 @@ function validateRegistration(): boolean {
   return Object.keys(errors).length === 0
 }
 
-const buyerEmail = ref('')
-const buyerPhone = ref('')
-const phoneCountry = ref('')
 const hasCoupon = ref(false)
 const couponCode = ref('')
 const checkoutLoading = ref(false)
-
-const { countries: paymentCountries, fetchOperators } = usePaymentOperators()
-fetchOperators()
-
-const phoneCountries = computed(() =>
-  paymentCountries.value.map((c: any) => ({
-    code: c.prefix,
-    label: `${c.name} (${c.prefix})`
-  }))
-)
-
-watch(phoneCountries, (countries) => {
-  if (countries.length && !phoneCountry.value) {
-    phoneCountry.value = countries[0].code
-  }
-}, { immediate: true })
 
 async function goToCheckout() {
   if (!event.value) return
@@ -398,8 +385,6 @@ async function goToCheckout() {
         eventName: event.value.title,
         eventDate: formatEventDate(event.value.date_start),
         eventLocation: [event.value.location, event.value.city].filter(Boolean).join(', '),
-        buyerEmail: buyerEmail.value,
-        buyerPhone: phoneCountry.value + buyerPhone.value,
         couponCode: hasCoupon.value ? couponCode.value : null,
         accessMode: accessMode.value,
         guestName: registrationData.value.guest_name || null,
@@ -495,7 +480,7 @@ watchEffect(() => {
     <div v-if="loading" class="w-full h-[420px] bg-gray-200 animate-pulse max-sm:h-[280px]" />
     <div v-else-if="event" class="w-full overflow-x-hidden">
       <div class="w-full h-[420px] flex items-center justify-center relative overflow-hidden bg-bg-secondary max-sm:h-[280px]">
-        <img v-if="event.flyer_url" :src="event.flyer_url" :alt="event.title" class="w-full h-full object-cover" loading="lazy" />
+        <NuxtImg v-if="event.flyer_url" :src="event.flyer_url" :alt="event.title" class="w-full h-full object-cover" preload />
         <div v-else class="flex flex-col items-center gap-3 text-center px-6 py-10">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-text-tertiary"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
           <div class="font-serif text-2xl text-text-secondary tracking-tight">Bannière de l'événement</div>
@@ -610,7 +595,7 @@ watchEffect(() => {
             <div v-for="(img, i) in event.gallery" :key="i"
                  class="aspect-[4/3] rounded-xl overflow-hidden cursor-pointer transition-opacity hover:opacity-85"
                  @click="openLightbox(i)">
-              <img :src="img" :alt="`Photo ${i + 1}`" class="w-full h-full object-cover" loading="lazy" />
+              <NuxtImg :src="img" :alt="`Photo ${i + 1}`" class="w-full h-full object-cover" loading="lazy" :placeholder="[20, 20]" />
             </div>
           </div>
         </section>
@@ -621,7 +606,7 @@ watchEffect(() => {
           <div v-else class="grid grid-cols-3 gap-4 max-sm:grid-cols-2">
             <div v-for="(artist, i) in artists" :key="i" class="flex flex-col items-center text-center p-4 pb-4 border border-border-light rounded-xl bg-surface transition-colors hover:border-orange-primary max-sm:p-3">
               <div class="w-24 h-24 rounded-full mb-3.5 shrink-0 overflow-hidden border-[3px] border-border-light bg-[#e8e4dc] max-sm:w-16 max-sm:h-16 max-sm:mb-2.5">
-                <img :src="artist.img" :alt="artist.name" class="w-full h-full object-cover block" loading="lazy" />
+                <NuxtImg :src="artist.img" :alt="artist.name" class="w-full h-full object-cover block" :width="96" :height="96" loading="lazy" :placeholder="[20, 20]" />
               </div>
               <div class="font-serif text-base text-text-primary mb-1.5 break-words w-full leading-snug max-sm:text-sm max-sm:leading-tight">{{ artist.name }}</div>
               <div class="inline-block text-xs font-bold tracking-wide uppercase bg-bg-primary text-text-tertiary px-3 py-1 rounded-full max-w-full leading-tight truncate">{{ artist.role }}</div>
@@ -669,10 +654,22 @@ watchEffect(() => {
           <div class="rounded-lg overflow-hidden border border-border-light">
             <div v-if="event?.latitude && event?.longitude" class="w-full h-[200px] max-sm:h-[140px]">
               <iframe
+                v-if="mapVisible"
                 :src="`https://www.openstreetmap.org/export/embed.html?bbox=${event.longitude-0.01},${event.latitude-0.01},${event.longitude+0.01},${event.latitude+0.01}&layer=mapnik&marker=${event.latitude},${event.longitude}`"
                 class="w-full h-full border-0"
                 loading="lazy"
+                title="Carte du lieu"
               ></iframe>
+              <button
+                v-else
+                type="button"
+                class="w-full h-full bg-bg-secondary flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-bg-primary transition-colors"
+                @click="mapVisible = true"
+              >
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-text-tertiary"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                <span class="text-sm font-medium text-text-secondary">Afficher la carte</span>
+                <span class="text-xs text-text-tertiary">Cliquez pour charger</span>
+              </button>
             </div>
             <div v-else class="w-full h-[200px] max-sm:h-[140px] bg-bg-secondary flex items-center justify-center cursor-pointer">
               <div class="text-center">
@@ -760,9 +757,9 @@ watchEffect(() => {
                 </div>
               </div>
               <div class="flex items-center gap-2 shrink-0">
-                <button class="w-8 h-8 rounded-lg border border-border-light bg-bg-primary flex items-center justify-center cursor-pointer transition-colors font-sans text-lg text-text-secondary hover:border-orange-primary hover:text-orange-primary disabled:opacity-30 disabled:cursor-not-allowed" :disabled="ticket.quantity === 0" @click="decreaseQty(ticket)">−</button>
-                <span class="w-8 text-center font-bold text-base text-text-primary">{{ ticket.quantity }}</span>
-                <button class="w-8 h-8 rounded-lg border border-border-light bg-bg-primary flex items-center justify-center cursor-pointer transition-colors font-sans text-lg text-text-secondary hover:border-orange-primary hover:text-orange-primary disabled:opacity-30 disabled:cursor-not-allowed" :disabled="ticket.quantity >= 10" @click="increaseQty(ticket)">+</button>
+                <button type="button" aria-label="Diminuer la quantité" class="w-11 h-11 rounded-lg border border-border-light bg-bg-primary flex items-center justify-center cursor-pointer transition-colors font-sans text-lg text-text-secondary hover:border-orange-primary hover:text-orange-primary disabled:opacity-30 disabled:cursor-not-allowed" :disabled="ticket.quantity === 0" @click="decreaseQty(ticket)">−</button>
+                <span class="w-9 text-center font-bold text-base text-text-primary tabular-nums" aria-live="polite">{{ ticket.quantity }}</span>
+                <button type="button" aria-label="Augmenter la quantité" class="w-11 h-11 rounded-lg border border-border-light bg-bg-primary flex items-center justify-center cursor-pointer transition-colors font-sans text-lg text-text-secondary hover:border-orange-primary hover:text-orange-primary disabled:opacity-30 disabled:cursor-not-allowed" :disabled="ticket.quantity >= 10" @click="increaseQty(ticket)">+</button>
               </div>
             </div>
           </div>
@@ -785,28 +782,28 @@ watchEffect(() => {
             <div class="text-xs font-semibold text-text-secondary mb-3">Informations d'inscription</div>
             <div class="flex flex-col gap-2.5">
               <div v-if="event.registration_fields.includes('full_name')">
-                <input v-model="registrationData.guest_name" type="text"
+                <input v-model="registrationData.guest_name" type="text" autocomplete="name" autocapitalize="words"
                   class="w-full px-3.5 py-2.5 rounded-xl border bg-bg-primary text-sm text-text-primary font-sans outline-none transition-colors focus:border-orange-primary"
                   :class="registrationErrors.guest_name ? 'border-red-400' : 'border-border-light'"
                   placeholder="Nom complet" />
                 <p v-if="registrationErrors.guest_name" class="text-xs text-red-500 mt-1">{{ registrationErrors.guest_name }}</p>
               </div>
               <div v-if="event.registration_fields.includes('email')">
-                <input v-model="registrationData.guest_email" type="email"
+                <input v-model="registrationData.guest_email" type="email" autocomplete="email" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false"
                   class="w-full px-3.5 py-2.5 rounded-xl border bg-bg-primary text-sm text-text-primary font-sans outline-none transition-colors focus:border-orange-primary"
                   :class="registrationErrors.guest_email ? 'border-red-400' : 'border-border-light'"
                   placeholder="votre@email.com" />
                 <p v-if="registrationErrors.guest_email" class="text-xs text-red-500 mt-1">{{ registrationErrors.guest_email }}</p>
               </div>
               <div v-if="event.registration_fields.includes('phone')">
-                <input v-model="registrationData.guest_phone" type="tel"
+                <input v-model="registrationData.guest_phone" type="tel" autocomplete="tel" inputmode="tel"
                   class="w-full px-3.5 py-2.5 rounded-xl border bg-bg-primary text-sm text-text-primary font-sans outline-none transition-colors focus:border-orange-primary"
                   :class="registrationErrors.guest_phone ? 'border-red-400' : 'border-border-light'"
                   placeholder="+229 XX XX XX XX" />
                 <p v-if="registrationErrors.guest_phone" class="text-xs text-red-500 mt-1">{{ registrationErrors.guest_phone }}</p>
               </div>
               <div v-if="event.registration_fields.includes('company')">
-                <input v-model="registrationData.guest_company" type="text"
+                <input v-model="registrationData.guest_company" type="text" autocomplete="organization"
                   class="w-full px-3.5 py-2.5 rounded-xl border bg-bg-primary text-sm text-text-primary font-sans outline-none transition-colors focus:border-orange-primary"
                   :class="registrationErrors.guest_company ? 'border-red-400' : 'border-border-light'"
                   placeholder="Nom de votre entreprise" />
@@ -816,15 +813,7 @@ watchEffect(() => {
           </div>
 
           <div v-if="totalQuantity > 0" class="px-5 pt-3 pb-5">
-            <div class="text-xs font-semibold text-text-secondary mb-3">Entrez vos informations</div>
             <div class="flex flex-col gap-2.5">
-              <input v-model="buyerEmail" type="email" required placeholder="Votre adresse email" class="w-full px-3.5 py-2.5 rounded-xl border border-border-light bg-bg-primary text-sm text-text-primary font-sans outline-none transition-colors focus:border-orange-primary" />
-              <div class="flex items-center gap-2">
-                <select v-model="phoneCountry" class="w-[45%] shrink-0 px-2.5 py-2.5 rounded-xl border border-border-light bg-bg-primary text-sm text-text-primary font-sans outline-none cursor-pointer transition-colors focus:border-orange-primary">
-                  <option v-for="c in phoneCountries" :key="c.code" :value="c.code">{{ c.label }}</option>
-                </select>
-                <input v-model="buyerPhone" type="tel" placeholder="Numéro de téléphone" class="flex-1 min-w-0 px-3.5 py-2.5 rounded-xl border border-border-light bg-bg-primary text-sm text-text-primary font-sans outline-none transition-colors focus:border-orange-primary" />
-              </div>
               <label class="flex items-center gap-2 cursor-pointer">
                 <input v-model="hasCoupon" type="checkbox" class="w-4 h-4 accent-orange-primary cursor-pointer" />
                 <span class="text-sm text-text-secondary">J'ai un code promo</span>
@@ -947,7 +936,7 @@ watchEffect(() => {
         <div class="grid grid-cols-3 gap-5 max-md:grid-cols-1 max-md:gap-4">
           <NuxtLink v-for="evt in orgEvents" :key="evt.id" :to="`/events/${evt.slug || evt.id}`" class="bg-white border border-border-light rounded-xl overflow-hidden flex flex-col transition-all duration-200 cursor-pointer no-underline hover:bg-gray-50">
             <div class="h-[120px] relative overflow-hidden shrink-0 bg-bg-secondary">
-              <img v-if="evt.image" :src="evt.image" :alt="evt.title" class="w-full h-full object-cover" loading="lazy" />
+              <NuxtImg v-if="evt.image" :src="evt.image" :alt="evt.title" class="w-full h-full object-cover" loading="lazy" :placeholder="[20, 20]" />
               <div v-else class="w-full h-full flex items-center justify-center">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-text-tertiary"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
               </div>
@@ -984,7 +973,7 @@ watchEffect(() => {
         <button v-if="event.gallery.length > 1" class="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white text-xl transition-colors cursor-pointer border-none z-10" aria-label="Photo suivante" @click.stop="lightboxNext">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
         </button>
-        <img :src="event.gallery[lightboxIndex]" :alt="`Photo ${lightboxIndex + 1}`" class="max-w-full max-h-[90vh] rounded-lg object-contain" />
+        <NuxtImg :src="event.gallery[lightboxIndex]" :alt="`Photo ${lightboxIndex + 1}`" class="max-w-full max-h-[90vh] rounded-lg object-contain" :placeholder="[20, 20]" />
         <div v-if="event.gallery.length > 1" class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 backdrop-blur-sm text-white/70 text-xs font-medium px-3 py-1.5 rounded-full">{{ lightboxIndex + 1 }} / {{ event.gallery.length }}</div>
       </div>
     </Teleport>

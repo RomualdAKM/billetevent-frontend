@@ -20,7 +20,7 @@ const colorMap: Record<Notification['type'], { bg: string; icon: string; bar: st
 
 <template>
   <Teleport to="body">
-    <div class="fixed top-4 right-4 z-[100] flex flex-col gap-3 w-full max-w-sm pointer-events-none">
+    <div role="status" aria-live="polite" aria-atomic="false" class="fixed top-4 right-4 z-[100] flex flex-col gap-3 w-full max-w-sm pointer-events-none">
       <TransitionGroup
         enter-active-class="transition-all duration-300 ease-out"
         leave-active-class="transition-all duration-200 ease-in"
@@ -58,6 +58,7 @@ const colorMap: Record<Notification['type'], { bg: string; icon: string; bar: st
 
             <button
               type="button"
+              aria-label="Fermer la notification"
               class="w-6 h-6 flex items-center justify-center rounded text-text-tertiary hover:text-text-primary transition-colors shrink-0"
               @click="remove(n.id)"
             >

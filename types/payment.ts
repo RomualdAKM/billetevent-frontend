@@ -71,4 +71,11 @@ export interface FormErrors {
   operator?: string
   phone?: string
   cart?: string
+  guestName?: string
+  guestEmail?: string
+  guestPhone?: string
+  cardNumber?: string
+  cardExpiry?: string
+  cardCvv?: string
+  cardName?: string
 }

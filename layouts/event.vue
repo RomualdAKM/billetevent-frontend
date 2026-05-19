@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen bg-bg-primary font-sans">
     <LayoutNavbar />
-    <main>
+    <main id="main">
       <slot />
     </main>
   </div>

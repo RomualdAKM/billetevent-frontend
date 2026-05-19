@@ -5,6 +5,8 @@ export const useCartStore = defineStore('cart', () => {
   const eventId = ref<string | number | null>(null)
   const promoCode = ref<string | null>(null)
   const discount = ref(0)
+  // Persisted via pinia-plugin-persistedstate (plugins/pinia-persist.client.ts).
+  // Survives full-page refresh + leaving the app to confirm mobile-money payment.
 
   const subtotal = computed(() =>
     items.value.reduce((sum, item) => sum + item.price * item.quantity, 0),
@@ -68,4 +70,6 @@ export const useCartStore = defineStore('cart', () => {
     applyPromo,
     clearCart,
   }
+}, {
+  persist: true,
 })

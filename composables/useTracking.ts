@@ -35,6 +35,45 @@ const pixelsCache = () => useState<Record<number, PixelData[]>>('tracking_pixels
 // Scripts déjà chargés (éviter les doublons)
 const loadedScripts = new Set<string>()
 
+// ── Cookie consent gating ─────────────────────────────────────
+// Synced with components/ui/CookieConsent.vue (storage key v2)
+const CONSENT_STORAGE_KEY = 'billetevent_cookie_consent_v2'
+
+type ConsentRecord = { essential: true; analytics: boolean; marketing: boolean }
+
+/** Returns the current consent record, or null when the banner has not been answered yet. */
+function readConsent(): ConsentRecord | null {
+  if (typeof localStorage === 'undefined') return null
+  try {
+    const raw = localStorage.getItem(CONSENT_STORAGE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    return {
+      essential: true,
+      analytics: !!parsed.analytics,
+      marketing: !!parsed.marketing,
+    }
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Map a pixel type to the consent category it requires.
+ * - Facebook, TikTok, Google Ads = ad / retargeting → marketing
+ * - GA4 = audience measurement → analytics
+ */
+function consentCategoryFor(pixelType: string): 'analytics' | 'marketing' {
+  return pixelType === 'ga4' ? 'analytics' : 'marketing'
+}
+
+/** True when the user has explicitly granted consent for the category. */
+function hasConsentFor(category: 'analytics' | 'marketing'): boolean {
+  const consent = readConsent()
+  if (!consent) return false // No answer yet → no tracking until they choose
+  return consent[category] === true
+}
+
 export const useTracking = () => {
   const api = useApi()
 
@@ -146,8 +185,9 @@ export const useTracking = () => {
     }
   }
 
-  // ── Récupérer les pixels par type ──
+  // ── Récupérer les pixels par type — gated par le consentement utilisateur ──
   function getPixelsByType(type: string): PixelData[] {
+    if (!hasConsentFor(consentCategoryFor(type))) return []
     return activePixels.filter(p => p.type === type && p.is_active)
   }
 
@@ -173,9 +213,11 @@ export const useTracking = () => {
         activePixels = pixels
       }
 
-      // Injecter les scripts pour chaque pixel actif
+      // Injecter les scripts pour chaque pixel actif, gated par le consentement
+      // (un visiteur qui a refusé marketing ne verra jamais charger fbevents.js)
       for (const pixel of activePixels) {
         if (!pixel.is_active) continue
+        if (!hasConsentFor(consentCategoryFor(pixel.type))) continue
 
         switch (pixel.type) {
           case 'facebook':

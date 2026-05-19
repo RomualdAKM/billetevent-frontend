@@ -3,7 +3,7 @@
     <div class="max-w-[1200px] mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[2fr_1fr_1fr_1fr] gap-8 lg:gap-12 pb-12 border-b border-white/10 mb-8">
       <div>
         <div class="flex items-center gap-2.5 text-[1.1rem] font-bold text-white mb-3.5">
-          <img src="/logo.png" alt="BilletEvent" class="h-[80px] w-auto" />
+          <NuxtImg src="/logo.png" alt="BilletEvent" class="h-[80px] w-auto" :width="80" :height="80" loading="lazy" :placeholder="[20, 20]" />
         </div>
         <p class="text-sm leading-[1.7] text-white/50 max-w-[260px]">La plateforme de billetterie en ligne simple et puissante pour créer, vendre et gérer vos événements.</p>
         <div class="flex gap-3 mt-5">

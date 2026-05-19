@@ -1,6 +1,7 @@
-export default defineNuxtRouteMiddleware(() => {
+export default defineNuxtRouteMiddleware((to) => {
   const { isLoggedIn } = useAuthStore()
   if (isLoggedIn) {
-    return navigateTo('/dashboard')
+    const { getSafeRedirect } = useSafeRedirect()
+    return navigateTo(getSafeRedirect(to.query.redirect))
   }
 })

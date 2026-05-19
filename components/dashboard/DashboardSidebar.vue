@@ -85,10 +85,12 @@
               {{ item.badge }}
             </span>
             <span
-              v-if="item.kycBadge && !collapsed"
-              class="ml-auto bg-gold-dim text-gold rounded-full w-[18px] h-[18px] inline-flex items-center justify-center text-[0.65rem] font-extrabold shrink-0 border border-gold/20"
+              v-if="item.kycBadge && !collapsed && kycBadge"
+              :class="['ml-auto rounded-full w-[18px] h-[18px] inline-flex items-center justify-center text-[0.65rem] font-extrabold shrink-0 border', kycBadge.classes]"
+              :aria-label="kycBadge.ariaLabel"
+              :title="kycBadge.ariaLabel"
             >
-              !
+              {{ kycBadge.label }}
             </span>
           </NuxtLink>
         </div>
@@ -244,6 +246,33 @@ onUnmounted(() => {
 })
 
 const eventCount = ref<number | null>(null)
+
+// KYC badge in the sidebar — color/label reflects the current status so the
+// organiser can see at a glance what to do next.
+const kycBadge = computed<{ classes: string; label: string; ariaLabel: string } | null>(() => {
+  const status = (authStore.user as Record<string, unknown> | null)?.kyc_status as string | undefined
+  if (status === 'validated') return null
+  if (status === 'submitted' || status === 'in_review') {
+    return {
+      classes: 'bg-blue-dim text-blue-light border-blue-light/20',
+      label: '⏱',
+      ariaLabel: 'Vérification en cours',
+    }
+  }
+  if (status === 'rejected') {
+    return {
+      classes: 'bg-red-dim text-red-error border-red-error/20',
+      label: '✗',
+      ariaLabel: 'Vérification refusée',
+    }
+  }
+  // Default: pending / not started
+  return {
+    classes: 'bg-gold-dim text-gold border-gold/20',
+    label: '!',
+    ariaLabel: 'Vérification à compléter',
+  }
+})
 
 const loadEventCount = async () => {
   try {

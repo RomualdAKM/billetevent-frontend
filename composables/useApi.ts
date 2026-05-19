@@ -25,7 +25,13 @@ export const useApi = () => {
         const { error: notifyError } = useNotification()
         notifyError('Session expirée, veuillez vous reconnecter')
         localStorage.removeItem('auth_token')
-        navigateTo('/auth/login')
+        const { stripSensitiveQuery } = useSafeRedirect()
+        const currentPath = stripSensitiveQuery(window.location.pathname + window.location.search)
+        const target: { path: string; query?: Record<string, string> } = { path: '/auth/login' }
+        if (currentPath && !currentPath.startsWith('/auth/')) {
+          target.query = { redirect: currentPath }
+        }
+        navigateTo(target)
       }
       throw err
     }

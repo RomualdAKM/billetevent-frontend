@@ -5,6 +5,7 @@ const route = useRoute()
 const { verifyOtp, resendOtp: resendOtpApi } = useAuthApi()
 const authStore = useAuthStore()
 const { success, error: notifyError, info } = useNotification()
+const { getSafeRedirect } = useSafeRedirect()
 
 const userEmail = computed(() => (route.query.email as string) || (authStore.user?.email as string) || '')
 
@@ -61,7 +62,7 @@ const handleVerifyOtp = async () => {
     const response = await verifyOtp({ email: userEmail.value, otp: code })
     authStore.setAuth(response.user as Record<string, unknown>, response.token)
     success('Compte vérifié avec succès !')
-    await navigateTo('/dashboard')
+    await navigateTo(getSafeRedirect(route.query.redirect))
   } catch (err: any) {
     if (err?.status === 422 && err?.errors) {
       if (err.errors.otp) otpError.value = err.errors.otp[0]
@@ -107,8 +108,8 @@ onUnmounted(() => {
   <div class="contents">
   <AuthAuthPanel />
   <div class="flex-1 flex items-center justify-center px-6 py-10 lg:px-12 bg-bg-primary">
-    <div class="w-full max-w-[480px] bg-surface rounded-[20px] border border-border-light px-10 py-11 ">
-      <NuxtLink to="/auth/register" class="inline-flex items-center gap-1.5 text-[0.78rem] text-text-tertiary mb-5">
+    <form @submit.prevent="handleVerifyOtp" class="w-full max-w-[480px] bg-surface rounded-[20px] border border-border-light px-10 py-11 ">
+      <NuxtLink :to="{ path: '/auth/register', query: typeof route.query.redirect === 'string' ? { redirect: route.query.redirect } : undefined }" class="inline-flex items-center gap-1.5 text-[0.78rem] text-text-tertiary mb-5">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
         Changer l'adresse email
       </NuxtLink>
@@ -127,6 +128,10 @@ onUnmounted(() => {
           v-model="otpDigits[index]"
           type="text"
           maxlength="1"
+          inputmode="numeric"
+          pattern="[0-9]*"
+          :autocomplete="index === 0 ? 'one-time-code' : 'off'"
+          :autofocus="index === 0"
           @input="handleInput(index, $event)"
           @keydown="handleKeydown(index, $event)"
           class="w-14 h-[60px] border-[1.5px] rounded-[10px] text-[1.5rem] font-bold text-center font-sans outline-none transition-colors"
@@ -138,9 +143,9 @@ onUnmounted(() => {
       <p v-if="otpError" class="text-[0.75rem] text-red-error text-center mb-4">{{ otpError }}</p>
       <div v-else class="mb-4"></div>
       <button
+        type="submit"
         :disabled="loading"
         class="w-full py-3 bg-orange-primary text-white rounded-lg border-none text-[0.9rem] font-bold font-sans flex items-center justify-center gap-2 hover:bg-orange-light transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-        @click="handleVerifyOtp"
       >
         <svg v-if="!loading" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
         <svg v-else class="animate-spin" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10" stroke-opacity="0.3"/><path d="M12 2a10 10 0 0 1 10 10"/></svg>
@@ -161,7 +166,7 @@ onUnmounted(() => {
           Retour à l'accueil
         </NuxtLink>
       </div>
-    </div>
+    </form>
   </div>
   </div>
 </template>

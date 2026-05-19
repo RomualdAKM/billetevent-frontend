@@ -42,6 +42,28 @@ const roleClass = (r: string) => r === 'organizer' ? 'bg-blue-main/10 text-blue-
 const statusLabel = (s: string) => s === 'active' ? 'Actif' : 'Bloqu\u00e9'
 const statusClass = (s: string) => s === 'active' ? 'text-green-dark' : 'text-red-error'
 
+const usersTableColumns = [
+  { key: 'name', label: 'Nom' },
+  { key: 'email', label: 'Email', hideOnMobile: true },
+  { key: 'role', label: 'R\u00f4le' },
+  { key: 'registeredAt', label: 'Inscrit le', hideOnMobile: true },
+  { key: 'events', label: '\u00c9v\u00e9nements', class: 'text-right', hideOnMobile: true },
+  { key: 'orders', label: 'Commandes', class: 'text-right', hideOnMobile: true },
+  { key: 'status', label: 'Statut' },
+]
+
+const roleOptions = [
+  { label: 'Tous les r\u00f4les', value: '' },
+  { label: 'Acheteur', value: 'buyer' },
+  { label: 'Organisateur', value: 'organizer' },
+]
+
+const statusOptions = [
+  { label: 'Tous les statuts', value: '' },
+  { label: 'Actif', value: 'active' },
+  { label: 'Bloqu\u00e9', value: 'blocked' },
+]
+
 const formatDate = (dateStr: string) => {
   if (!dateStr) return '\u2014'
   const d = new Date(dateStr)
@@ -109,106 +131,70 @@ onMounted(loadUsers)
     </div>
 
     <div class="flex flex-wrap items-center gap-3 mb-5">
-      <input
-        v-model="searchQuery"
-        type="text"
-        placeholder="Rechercher par nom ou email..."
-        class="w-full px-4 py-2.5 rounded-lg border border-border-light bg-bg-primary text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-orange-primary/30 focus:border-orange-primary transition max-w-[280px]"
-      />
-      <select
-        v-model="filterRole"
-        class="w-full px-4 py-2.5 rounded-lg border border-border-light bg-bg-primary text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-orange-primary/30 focus:border-orange-primary transition max-w-[180px]"
-      >
-        <option value="">Tous les rôles</option>
-        <option value="buyer">Acheteur</option>
-        <option value="organizer">Organisateur</option>
-      </select>
-      <select
-        v-model="filterStatus"
-        class="w-full px-4 py-2.5 rounded-lg border border-border-light bg-bg-primary text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-orange-primary/30 focus:border-orange-primary transition max-w-[180px]"
-      >
-        <option value="">Tous les statuts</option>
-        <option value="active">Actif</option>
-        <option value="blocked">Bloqué</option>
-      </select>
-    </div>
-
-    <div class="bg-surface border border-border-light rounded-xl overflow-hidden">
-      <div class="overflow-x-auto">
-        <table class="w-full hidden md:table">
-          <thead>
-            <tr class="border-b border-border-light">
-              <th class="text-left text-xs font-semibold text-text-tertiary uppercase tracking-wide px-4 py-3">Nom</th>
-              <th class="text-left text-xs font-semibold text-text-tertiary uppercase tracking-wide px-4 py-3">Email</th>
-              <th class="text-left text-xs font-semibold text-text-tertiary uppercase tracking-wide px-4 py-3">Rôle</th>
-              <th class="text-left text-xs font-semibold text-text-tertiary uppercase tracking-wide px-4 py-3">Inscrit le</th>
-              <th class="text-right text-xs font-semibold text-text-tertiary uppercase tracking-wide px-4 py-3">Événements</th>
-              <th class="text-right text-xs font-semibold text-text-tertiary uppercase tracking-wide px-4 py-3">Commandes</th>
-              <th class="text-left text-xs font-semibold text-text-tertiary uppercase tracking-wide px-4 py-3">Statut</th>
-              <th class="text-right text-xs font-semibold text-text-tertiary uppercase tracking-wide px-4 py-3">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="u in paginatedUsers" :key="u.id" class="border-b border-border-light last:border-b-0">
-              <td class="px-4 py-3 text-sm font-medium text-text-primary">{{ u.name }}</td>
-              <td class="px-4 py-3 text-sm text-text-secondary">{{ u.email }}</td>
-              <td class="px-4 py-3">
-                <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold" :class="roleClass(u.role)">{{ roleLabel(u.role) }}</span>
-              </td>
-              <td class="px-4 py-3 text-sm text-text-secondary">{{ formatDate(u.registeredAt) }}</td>
-              <td class="px-4 py-3 text-sm text-text-secondary text-right">{{ u.role === 'organizer' ? u.events : '—' }}</td>
-              <td class="px-4 py-3 text-sm text-text-secondary text-right">{{ u.role === 'buyer' ? u.orders : '—' }}</td>
-              <td class="px-4 py-3 text-sm font-medium" :class="statusClass(u.status)">{{ statusLabel(u.status) }}</td>
-              <td class="px-4 py-3 text-right">
-                <button
-                  class="text-sm font-medium cursor-pointer hover:underline"
-                  :class="u.status === 'active' ? 'text-red-error' : 'text-green-dark'"
-                  @click="openBlockToggle(u)"
-                >{{ u.status === 'active' ? 'Bloquer' : 'Débloquer' }}</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+      <div class="w-full max-w-[280px]">
+        <UiBaseInput
+          v-model="searchQuery"
+          type="search"
+          placeholder="Rechercher par nom ou email..."
+        />
       </div>
-
-      <div class="flex flex-col md:hidden">
-        <div v-for="u in paginatedUsers" :key="u.id" class="border-b border-border-light last:border-b-0 p-4">
-          <div class="flex items-center justify-between mb-1">
-            <span class="text-sm font-medium text-text-primary">{{ u.name }}</span>
-            <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold" :class="roleClass(u.role)">{{ roleLabel(u.role) }}</span>
-          </div>
-          <div class="text-xs text-text-secondary mb-1">{{ u.email }}</div>
-          <div class="flex items-center justify-between">
-            <span class="text-xs text-text-tertiary">{{ formatDate(u.registeredAt) }}</span>
-            <span class="text-xs font-medium" :class="statusClass(u.status)">{{ statusLabel(u.status) }}</span>
-          </div>
-          <button
-            class="mt-2 text-sm font-medium cursor-pointer hover:underline"
-            :class="u.status === 'active' ? 'text-red-error' : 'text-green-dark'"
-            @click="openBlockToggle(u)"
-          >{{ u.status === 'active' ? 'Bloquer' : 'Débloquer' }}</button>
-        </div>
+      <div class="w-full max-w-[180px]">
+        <UiBaseSelect
+          v-model="filterRole"
+          :options="roleOptions"
+        />
+      </div>
+      <div class="w-full max-w-[180px]">
+        <UiBaseSelect
+          v-model="filterStatus"
+          :options="statusOptions"
+        />
       </div>
     </div>
+
+    <UiDataTable
+      :columns="usersTableColumns"
+      :rows="paginatedUsers"
+      :loading="loading"
+      empty-title="Aucun utilisateur"
+      empty-description="Aucun utilisateur ne correspond à vos critères."
+    >
+      <template #cell-name="{ row }">
+        <span class="text-sm font-medium text-text-primary">{{ row.name }}</span>
+      </template>
+      <template #cell-email="{ row }">
+        <span class="text-sm text-text-secondary">{{ row.email }}</span>
+      </template>
+      <template #cell-role="{ row }">
+        <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold" :class="roleClass(row.role)">{{ roleLabel(row.role) }}</span>
+      </template>
+      <template #cell-registeredAt="{ row }">
+        <span class="text-sm text-text-secondary">{{ formatDate(row.registeredAt) }}</span>
+      </template>
+      <template #cell-events="{ row }">
+        <span class="text-sm text-text-secondary">{{ row.role === 'organizer' ? row.events : '—' }}</span>
+      </template>
+      <template #cell-orders="{ row }">
+        <span class="text-sm text-text-secondary">{{ row.role === 'buyer' ? row.orders : '—' }}</span>
+      </template>
+      <template #cell-status="{ row }">
+        <span class="text-sm font-medium" :class="statusClass(row.status)">{{ statusLabel(row.status) }}</span>
+      </template>
+      <template #actions="{ row }">
+        <button
+          class="text-sm font-medium cursor-pointer hover:underline"
+          :class="row.status === 'active' ? 'text-red-error' : 'text-green-dark'"
+          @click="openBlockToggle(row)"
+        >{{ row.status === 'active' ? 'Bloquer' : 'Débloquer' }}</button>
+      </template>
+    </UiDataTable>
 
     <div v-if="totalPages > 1" class="flex items-center justify-center gap-2 mt-5">
-      <button
-        class="px-3 py-1.5 rounded-lg text-sm font-medium border border-border-light bg-surface text-text-secondary cursor-pointer transition-colors hover:bg-surface-2 disabled:opacity-50 disabled:cursor-not-allowed"
-        :disabled="currentPage === 1"
-        @click="currentPage--"
-      >Précédent</button>
-      <button
-        v-for="page in totalPages"
-        :key="page"
-        class="w-8 h-8 rounded-lg text-sm font-medium border cursor-pointer transition-colors"
-        :class="page === currentPage ? 'bg-orange-primary text-white border-orange-primary' : 'border-border-light bg-surface text-text-secondary hover:bg-surface-2'"
-        @click="currentPage = page"
-      >{{ page }}</button>
-      <button
-        class="px-3 py-1.5 rounded-lg text-sm font-medium border border-border-light bg-surface text-text-secondary cursor-pointer transition-colors hover:bg-surface-2 disabled:opacity-50 disabled:cursor-not-allowed"
-        :disabled="currentPage === totalPages"
-        @click="currentPage++"
-      >Suivant</button>
+      <UiPagination
+        :total-pages="totalPages"
+        :current-page="currentPage"
+        @page-change="currentPage = $event"
+      />
     </div>
 
     <UiConfirmModal

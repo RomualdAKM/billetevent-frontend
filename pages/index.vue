@@ -121,10 +121,11 @@ const faqItems = [
         </div>
 
         <div class="flex items-center justify-center">
-          <img
+          <NuxtImg
             src="~/assets/banner.png"
             alt="Billet BilletEvent"
             class="w-full max-w-[320px] md:max-w-[380px] rounded-lg"
+            preload
           />
         </div>
       </div>

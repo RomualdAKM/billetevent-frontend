@@ -34,6 +34,9 @@ export const useAccountApi = () => {
   const getOrder = (id: number | string) =>
     get(`/orders/${id}`)
 
+  const getGuestOrder = (reference: string, signedQuery: Record<string, string>) =>
+    get(`/orders/${reference}/guest-access`, signedQuery)
+
   const requestRefund = (orderId: number | string) =>
     post(`/orders/${orderId}/refund`)
 
@@ -46,7 +49,7 @@ export const useAccountApi = () => {
   return {
     getProfile, updateProfile, uploadAvatar, changePassword, deleteAccount,
     getTickets, getTicket, downloadTicket, resendTicket,
-    getOrders, getOrder, requestRefund,
+    getOrders, getOrder, getGuestOrder, requestRefund,
     getFavorites, toggleFavorite,
   }
 }

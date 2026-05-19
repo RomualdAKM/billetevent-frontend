@@ -1,4 +1,4 @@
-export default defineNuxtRouteMiddleware(async () => {
+export default defineNuxtRouteMiddleware(async (to) => {
   const authStore = useAuthStore()
 
   // Côté serveur : pas de localStorage → laisser passer, le client gère
@@ -11,6 +11,12 @@ export default defineNuxtRouteMiddleware(async () => {
     await authStore.waitForInit()
   }
 
+  const { stripSensitiveQuery } = useSafeRedirect()
+  const loginRedirect = () => navigateTo({
+    path: '/auth/login',
+    query: { redirect: stripSensitiveQuery(to.fullPath) },
+  })
+
   // Vérifier l'authentification avec fallback localStorage
   if (!authStore.isLoggedIn) {
     const storedToken = localStorage.getItem('auth_token')
@@ -20,10 +26,10 @@ export default defineNuxtRouteMiddleware(async () => {
         await authStore.fetchUser()
       } catch {
         authStore.logout()
-        return navigateTo('/auth/login')
+        return loginRedirect()
       }
     } else {
-      return navigateTo('/auth/login')
+      return loginRedirect()
     }
   }
 

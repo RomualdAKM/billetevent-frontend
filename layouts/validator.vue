@@ -1,5 +1,7 @@
 <template>
   <div class="min-h-screen bg-bg-primary font-sans">
-    <slot />
+    <main id="main" class="contents">
+      <slot />
+    </main>
   </div>
 </template>

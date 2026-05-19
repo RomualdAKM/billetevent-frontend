@@ -116,11 +116,24 @@ const showDropdown = computed(() => {
   return isOpen.value && (props.loading || props.suggestions.length > 0 || query.value.length > 2)
 })
 
+// Suggestions come from third parties (Nominatim addresses, etc.) — we must
+// escape the source string BEFORE wrapping the matched substring in <strong>,
+// otherwise an attacker-controlled suggestion could inject HTML through v-html.
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 function highlightMatch(text: string): string {
-  if (!query.value || query.value.length < 1) return text
-  const escaped = query.value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const regex = new RegExp(`(${escaped})`, 'gi')
-  return text.replace(regex, '<strong class="font-semibold text-text-primary">$1</strong>')
+  const safe = escapeHtml(text)
+  if (!query.value || query.value.length < 1) return safe
+  const escapedQuery = escapeHtml(query.value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const regex = new RegExp(`(${escapedQuery})`, 'gi')
+  return safe.replace(regex, '<strong class="font-semibold text-text-primary">$1</strong>')
 }
 </script>
 

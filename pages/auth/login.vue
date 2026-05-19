@@ -4,6 +4,8 @@ definePageMeta({ layout: 'auth', middleware: 'guest' })
 const { login } = useAuthApi()
 const authStore = useAuthStore()
 const { success, error: notifyError } = useNotification()
+const route = useRoute()
+const { getSafeRedirect } = useSafeRedirect()
 
 const showPassword = ref(false)
 const email = ref('')
@@ -31,7 +33,7 @@ const handleLogin = async () => {
     authStore.setAuth(response.user as Record<string, unknown>, response.token)
     await authStore.fetchUser()
     success('Connexion réussie !')
-    await navigateTo('/dashboard')
+    await navigateTo(getSafeRedirect(route.query.redirect))
   } catch (err: any) {
     if (err?.status === 422 && err?.errors) {
       if (err.errors.email) errors.value.email = err.errors.email[0]
@@ -39,7 +41,9 @@ const handleLogin = async () => {
     } else if (err?.response?.status === 403 || err?.status === 403) {
       const msg = err?.message || err?.data?.message || err?.response?._data?.message || 'Veuillez vérifier votre email'
       notifyError(msg)
-      await navigateTo({ path: '/auth/verify-otp', query: { email: email.value } })
+      const otpQuery: Record<string, string> = { email: email.value }
+      if (typeof route.query.redirect === 'string') otpQuery.redirect = route.query.redirect
+      await navigateTo({ path: '/auth/verify-otp', query: otpQuery })
     } else {
       notifyError(err?.message || err?.data?.message || 'Email ou mot de passe incorrect')
     }
@@ -53,7 +57,7 @@ const handleLogin = async () => {
   <div class="contents">
   <AuthAuthPanel />
   <div class="flex-1 flex items-center justify-center px-6 py-10 lg:px-12 bg-bg-primary">
-    <div class="w-full max-w-[480px] bg-surface rounded-[20px] border border-border-light px-10 py-11 ">
+    <form @submit.prevent="handleLogin" class="w-full max-w-[480px] bg-surface rounded-[20px] border border-border-light px-10 py-11 ">
       <div class="mb-7">
         <div class="font-serif text-[1.6rem] text-text-primary mb-1.5">Bon retour parmi nous</div>
         <div class="text-[0.83rem] text-text-secondary leading-[1.55]">Connectez-vous à votre compte BilletEvent.</div>
@@ -66,6 +70,12 @@ const handleLogin = async () => {
         <input
           v-model="email"
           type="email"
+          autocomplete="email"
+          inputmode="email"
+          autocapitalize="off"
+          autocorrect="off"
+          spellcheck="false"
+          autofocus
           placeholder="you@example.com"
           class="w-full px-3.5 py-2.5 border-[1.5px] rounded-lg font-sans text-[0.87rem] text-text-primary bg-surface outline-none placeholder:text-text-tertiary focus:border-orange-primary transition-colors"
           :class="errors.email ? 'border-red-error' : 'border-border-light'"
@@ -82,11 +92,11 @@ const handleLogin = async () => {
           <input
             v-model="password"
             :type="showPassword ? 'text' : 'password'"
+            autocomplete="current-password"
             placeholder="••••••••"
             class="w-full px-3.5 py-2.5 pr-[42px] border-[1.5px] rounded-lg font-sans text-[0.87rem] text-text-primary bg-surface outline-none placeholder:text-text-tertiary focus:border-orange-primary transition-colors"
             :class="errors.password ? 'border-red-error' : 'border-border-light'"
             @input="errors.password = ''"
-            @keyup.enter="handleLogin"
           />
           <button type="button" @click="showPassword = !showPassword" class="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary flex items-center">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -99,23 +109,23 @@ const handleLogin = async () => {
         <label for="remember" class="text-[0.78rem] text-text-secondary leading-[1.5]">Se souvenir de moi</label>
       </div>
       <button
+        type="submit"
         :disabled="loading"
         class="w-full py-3 bg-orange-primary text-white rounded-lg border-none text-[0.9rem] font-bold font-sans flex items-center justify-center gap-2 hover:bg-orange-light transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-        @click="handleLogin"
       >
         <svg v-if="!loading" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
         <svg v-else class="animate-spin" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10" stroke-opacity="0.3"/><path d="M12 2a10 10 0 0 1 10 10"/></svg>
         {{ loading ? 'Connexion...' : 'Se connecter' }}
       </button>
       <div class="text-center mt-5 text-[0.8rem] text-text-tertiary">
-        Vous n'avez pas de compte ? <NuxtLink to="/auth/register" class="text-orange-primary font-semibold">Créer un compte</NuxtLink>
+        Vous n'avez pas de compte ? <NuxtLink :to="{ path: '/auth/register', query: typeof route.query.redirect === 'string' ? { redirect: route.query.redirect } : undefined }" class="text-orange-primary font-semibold">Créer un compte</NuxtLink>
       </div>
       <div class="text-center mt-4">
         <NuxtLink to="/" class="text-sm text-gray-500 hover:text-orange-500 transition-colors">
           Retour à l'accueil
         </NuxtLink>
       </div>
-    </div>
+    </form>
   </div>
   </div>
 </template>

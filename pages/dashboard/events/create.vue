@@ -105,38 +105,17 @@ const optionalSteps = [
   { id: 12, title: 'Campagne SMS', sub: 'Notifications, rappels', icon: 'sms' },
   { id: 13, title: 'Points de vente', sub: 'Vente physique, guichets', icon: 'store' }
 ]
+// Aligned 1:1 with App\Enums\EventCategory (backend). Adding a value here without
+// matching the enum will be silently rejected by the API.
 const categories = [
-  { group: 'Culture & Arts', items: [
-    { label: 'Musique & Concert', value: 'musique' }, { label: 'Art & Exposition', value: 'art' },
-    { label: 'Théâtre & Spectacle', value: 'art' }, { label: 'Festival Culturel', value: 'musique' }
-  ] },
-  { group: 'Formation & Savoir', items: [
-    { label: 'Formation', value: 'formation' }, { label: 'Masterclass', value: 'formation' },
-    { label: 'Conférence', value: 'formation' }, { label: 'Séminaire', value: 'formation' },
-    { label: 'Atelier & Workshop', value: 'formation' }
-  ] },
-  { group: 'Business & Réseautage', items: [
-    { label: 'Networking & Réseautage', value: 'business' }, { label: 'Forum Business', value: 'business' },
-    { label: 'Pitch & Startup', value: 'business' }
-  ] },
-  { group: 'Religion & Spiritualité', items: [
-    { label: 'Événement Religieux', value: 'autre' }, { label: 'Retraite Spirituelle', value: 'autre' }
-  ] },
-  { group: 'Fête & Célébration', items: [
-    { label: 'Soirée & Gala', value: 'autre' }, { label: 'Mariage & Cérémonie', value: 'autre' },
-    { label: 'Anniversaire', value: 'autre' }
-  ] },
-  { group: 'Sport & Bien-être', items: [
-    { label: 'Compétition Sportive', value: 'sport' }, { label: 'Tournoi', value: 'sport' },
-    { label: 'Yoga & Méditation', value: 'sport' }
-  ] },
-  { group: 'Gastronomie & Lifestyle', items: [
-    { label: 'Dégustation', value: 'gastronomie' }, { label: 'Food Festival', value: 'gastronomie' }
-  ] },
-  { group: 'Tech & Digital', items: [
-    { label: 'Événement Tech', value: 'tech' }, { label: 'Webinaire', value: 'tech' },
-    { label: 'Bootcamp', value: 'tech' }, { label: 'Gaming & E-sport', value: 'tech' }
-  ] }
+  { value: 'musique',     label: 'Musique & Concert' },
+  { value: 'art',         label: 'Art, Théâtre & Spectacle' },
+  { value: 'business',    label: 'Business & Networking' },
+  { value: 'formation',   label: 'Formation & Conférence' },
+  { value: 'tech',        label: 'Tech & Digital' },
+  { value: 'sport',       label: 'Sport & Bien-être' },
+  { value: 'gastronomie', label: 'Gastronomie & Lifestyle' },
+  { value: 'autre',       label: 'Autre' },
 ]
 const isPrivate = ref(false)
 const isInvitationOnly = ref(false)
@@ -299,15 +278,16 @@ function removeFaq(i: number) {
 }
 function toggleSection(key: string) { sectionStates.value[key] = !sectionStates.value[key] }
 function selectRefund(val: string) { refundPolicy.value = val; showCustomRefund.value = val === 'custom'; if (val !== 'custom') customRefundDays.value = null }
-function onCategoryChange(e: Event) { showCatCustom.value = (e.target as HTMLSelectElement).value === 'autre' }
+function onCategoryChange(e: Event) {
+  showCatCustom.value = (e.target as HTMLSelectElement).value === 'autre'
+}
 const showPublishModal = ref(false)
 
 const buildFormData = () => {
   const fd = new FormData()
   fd.append('title', eventTitle.value)
   fd.append('description', eventDescription.value)
-  const categoryItem = categories.flatMap(c => c.items).find(i => i.label === selectedCategory.value)
-  fd.append('category', categoryItem ? categoryItem.value : selectedCategory.value)
+  fd.append('category', selectedCategory.value)
   fd.append('date_start', `${eventDate.value} ${eventTime.value || '00:00'}`)
   fd.append('date_end', `${eventEndDate.value || eventDate.value} ${eventEndTime.value || '23:59'}`)
   fd.append('location', eventAddress.value || eventVenue.value)
@@ -615,6 +595,8 @@ const saveOrPublish = async (publish: boolean) => {
       draftStatus.value = 'Brouillon sauvegardé'
       success('Brouillon sauvegardé')
     }
+    // Persisted successfully — drop the unsaved-changes guard before navigating
+    isDirty.value = false
     setTimeout(() => navigateTo('/dashboard/events'), 600)
   } catch (err: any) {
     if (err?.status === 422 && err?.errors) {
@@ -641,8 +623,7 @@ const loadEditEvent = async () => {
     const e = res?.data ?? res
     eventTitle.value = e.title || ''
     eventDescription.value = e.description || ''
-    const matchingItem = categories.flatMap(c => c.items).find(i => i.value === e.category)
-    selectedCategory.value = matchingItem ? matchingItem.label : (e.category || '')
+    selectedCategory.value = e.category || ''
     if (e.date_start) {
       const ds = new Date(e.date_start)
       eventDate.value = ds.toISOString().slice(0, 10)
@@ -753,7 +734,53 @@ const loadEditEvent = async () => {
   }
 }
 
-onMounted(() => loadEditEvent())
+// ── Unsaved-changes guard ────────────────────────────────────
+// Prevents losing data on tab close or accidental nav. Tracks the main
+// content fields; tweaks to ancillary refs (gallery uploads, etc.) are
+// not watched to keep the watcher list cheap.
+const isDirty = ref(false)
+let suppressDirtyTracking = true
+const markDirty = () => { if (!suppressDirtyTracking) isDirty.value = true }
+
+watch(
+  [
+    eventTitle, eventDescription, eventDate, eventTime, eventEndDate, eventEndTime,
+    eventVenue, eventCity, eventAddress, eventCountry, eventCapacity,
+    selectedCategory, eventType, accessMode, refundPolicy,
+  ],
+  markDirty,
+)
+watch(ticketTypes, markDirty, { deep: true })
+watch(promoCodes, markDirty, { deep: true })
+watch(pdvList, markDirty, { deep: true })
+watch(programItems, markDirty, { deep: true })
+watch(artists, markDirty, { deep: true })
+watch(faqItems, markDirty, { deep: true })
+
+const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+  if (isDirty.value) {
+    e.preventDefault()
+    e.returnValue = ''
+  }
+}
+
+onMounted(async () => {
+  window.addEventListener('beforeunload', handleBeforeUnload)
+  await loadEditEvent()
+  // Wait for hydration writes to flush before re-enabling dirty tracking
+  await nextTick()
+  isDirty.value = false
+  suppressDirtyTracking = false
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('beforeunload', handleBeforeUnload)
+})
+
+onBeforeRouteLeave(() => {
+  if (!isDirty.value) return true
+  return window.confirm('Vous avez des modifications non enregistrées. Quitter cette page ?')
+})
 
 // Boutons d'action rendus directement en sticky (plus de Teleport)
 
@@ -835,7 +862,7 @@ const finputClass = 'py-2.5 px-3.5 rounded-lg border-[1.5px] border-border-light
           <div class="flex flex-col gap-[7px] mb-6"><label class="text-[0.78rem] font-bold text-ink2 tracking-wide">Nom de l'événement <span class="text-red-error ml-0.5">*</span></label><input v-model="eventTitle" :class="finputClass" placeholder="ex : Vibe Venture 2025 — Wine & Music Festival" /></div>
           <div class="flex flex-col gap-[7px] mb-6"><label class="text-[0.78rem] font-bold text-ink2 tracking-wide">Description <span class="text-red-error ml-0.5">*</span></label><textarea v-model="eventDescription" :class="finputClass + ' resize-y min-h-[100px] leading-relaxed'" rows="4" placeholder="Décrivez votre événement…"></textarea></div>
           <div class="grid grid-cols-2 gap-5 mb-6 max-[900px]:grid-cols-1">
-            <div class="flex flex-col gap-[7px]"><label class="text-[0.78rem] font-bold text-ink2 tracking-wide">Catégorie <span class="text-red-error ml-0.5">*</span></label><select :class="finputClass" v-model="selectedCategory" @change="onCategoryChange"><option value="">Choisir une catégorie</option><optgroup v-for="cat in categories" :key="cat.group" :label="cat.group"><option v-for="item in cat.items" :key="item.label" :value="item.label">{{ item.label }}</option></optgroup><option value="autre">Autre (préciser)</option></select><input v-if="showCatCustom" :class="finputClass + ' mt-2'" placeholder="Décrivez votre catégorie…" /></div>
+            <div class="flex flex-col gap-[7px]"><label class="text-[0.78rem] font-bold text-ink2 tracking-wide">Catégorie <span class="text-red-error ml-0.5">*</span></label><select :class="finputClass" v-model="selectedCategory" @change="onCategoryChange"><option value="">Choisir une catégorie</option><option v-for="c in categories" :key="c.value" :value="c.value">{{ c.label }}</option></select><input v-if="showCatCustom" :class="finputClass + ' mt-2'" placeholder="Précisez votre catégorie…" /></div>
             <div class="flex flex-col gap-[7px]"><label class="text-[0.78rem] font-bold text-ink2 tracking-wide">Langue principale</label><select :class="finputClass"><option>Français</option><option>Anglais</option><option>Wolof</option><option>Arabe</option></select></div>
           </div>
           <div class="grid grid-cols-2 gap-5 mb-6 max-[900px]:grid-cols-1"><div class="flex flex-col gap-[7px]"><label class="text-[0.78rem] font-bold text-ink2 tracking-wide">Date de début <span class="text-red-error ml-0.5">*</span></label><input v-model="eventDate" type="date" :class="finputClass" /></div><div class="flex flex-col gap-[7px]"><label class="text-[0.78rem] font-bold text-ink2 tracking-wide">Heure de début <span class="text-red-error ml-0.5">*</span></label><input v-model="eventTime" type="time" :class="finputClass" /></div></div>

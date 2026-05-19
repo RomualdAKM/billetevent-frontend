@@ -34,6 +34,31 @@ const formatFee = (type: string, value: number) => {
   return type === 'percentage' ? value + '%' : new Intl.NumberFormat('fr-FR').format(value) + ' F'
 }
 
+const feesTableColumns = [
+  { key: 'operator', label: 'Opérateur' },
+  { key: 'country', label: 'Pays', hideOnMobile: true },
+  { key: 'gateway', label: 'Gateway', hideOnMobile: true },
+  { key: 'direction', label: 'Direction' },
+  { key: 'gatewayFee', label: 'Frais Gateway', class: 'text-right' },
+  { key: 'platformFee', label: 'Frais Plateforme', class: 'text-right' },
+]
+
+const countryOptions = computed(() => [
+  { label: 'Tous les pays', value: '' },
+  ...countries.value.map((c: string) => ({ label: c, value: c })),
+])
+
+const directionOptions = [
+  { label: 'Toutes les directions', value: '' },
+  { label: 'Payin', value: 'payin' },
+  { label: 'Payout', value: 'payout' },
+]
+
+const feeTypeOptions = [
+  { label: 'Pourcentage', value: 'percentage' },
+  { label: 'Fixe', value: 'fixed' },
+]
+
 const openEdit = (fee: any) => {
   editingFee.value = fee
   editForm.gatewayFeeType = fee.gatewayFeeType || fee.gateway_fee_type || 'percentage'
@@ -141,61 +166,55 @@ onMounted(loadFees)
     </div>
 
     <div class="flex flex-wrap items-center gap-3 mb-5">
-      <select
-        v-model="filterCountry"
-        class="w-full px-4 py-2.5 rounded-lg border border-border-light bg-bg-primary text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-orange-primary/30 focus:border-orange-primary transition max-w-[200px]"
-      >
-        <option value="">Tous les pays</option>
-        <option v-for="c in countries" :key="c" :value="c">{{ c }}</option>
-      </select>
-      <select
-        v-model="filterDirection"
-        class="w-full px-4 py-2.5 rounded-lg border border-border-light bg-bg-primary text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-orange-primary/30 focus:border-orange-primary transition max-w-[200px]"
-      >
-        <option value="">Toutes les directions</option>
-        <option value="payin">Payin</option>
-        <option value="payout">Payout</option>
-      </select>
-    </div>
-
-    <div class="bg-surface border border-border-light rounded-xl overflow-hidden">
-      <div class="overflow-x-auto">
-        <table class="w-full">
-          <thead>
-            <tr class="border-b border-border-light">
-              <th class="text-left text-xs font-semibold text-text-tertiary uppercase tracking-wide px-4 py-3">Opérateur</th>
-              <th class="text-left text-xs font-semibold text-text-tertiary uppercase tracking-wide px-4 py-3">Pays</th>
-              <th class="text-left text-xs font-semibold text-text-tertiary uppercase tracking-wide px-4 py-3">Gateway</th>
-              <th class="text-left text-xs font-semibold text-text-tertiary uppercase tracking-wide px-4 py-3">Direction</th>
-              <th class="text-right text-xs font-semibold text-text-tertiary uppercase tracking-wide px-4 py-3">Frais Gateway</th>
-              <th class="text-right text-xs font-semibold text-text-tertiary uppercase tracking-wide px-4 py-3">Frais Plateforme</th>
-              <th class="text-right text-xs font-semibold text-text-tertiary uppercase tracking-wide px-4 py-3">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="fee in filteredFees" :key="fee.id" class="border-b border-border-light last:border-b-0">
-              <td class="px-4 py-3 text-sm font-medium text-text-primary">{{ fee.operator }}</td>
-              <td class="px-4 py-3 text-sm text-text-secondary">{{ fee.country }}</td>
-              <td class="px-4 py-3 text-sm text-text-secondary">{{ fee.gateway }}</td>
-              <td class="px-4 py-3">
-                <span
-                  class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold"
-                  :class="fee.direction === 'payin' ? 'bg-green-dark/10 text-green-dark' : 'bg-blue-main/10 text-blue-main'"
-                >{{ fee.direction === 'payin' ? 'Payin' : 'Payout' }}</span>
-              </td>
-              <td class="px-4 py-3 text-sm text-text-primary text-right font-medium">{{ formatFee(fee.gatewayFeeType, fee.gatewayFeeValue) }}</td>
-              <td class="px-4 py-3 text-sm text-orange-primary text-right font-medium">{{ formatFee(fee.platformFeeType, fee.platformFeeValue) }}</td>
-              <td class="px-4 py-3 text-right">
-                <button
-                  class="text-sm font-medium text-orange-primary hover:underline cursor-pointer"
-                  @click="openEdit(fee)"
-                >Modifier</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+      <div class="w-full max-w-[200px]">
+        <UiBaseSelect
+          v-model="filterCountry"
+          :options="countryOptions"
+        />
+      </div>
+      <div class="w-full max-w-[200px]">
+        <UiBaseSelect
+          v-model="filterDirection"
+          :options="directionOptions"
+        />
       </div>
     </div>
+
+    <UiDataTable
+      :columns="feesTableColumns"
+      :rows="filteredFees"
+      :loading="loading"
+      empty-title="Aucun frais"
+      empty-description="Aucun frais ne correspond à vos critères."
+    >
+      <template #cell-operator="{ row }">
+        <span class="text-sm font-medium text-text-primary">{{ row.operator }}</span>
+      </template>
+      <template #cell-country="{ row }">
+        <span class="text-sm text-text-secondary">{{ row.country }}</span>
+      </template>
+      <template #cell-gateway="{ row }">
+        <span class="text-sm text-text-secondary">{{ row.gateway }}</span>
+      </template>
+      <template #cell-direction="{ row }">
+        <span
+          class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold"
+          :class="row.direction === 'payin' ? 'bg-green-dark/10 text-green-dark' : 'bg-blue-main/10 text-blue-main'"
+        >{{ row.direction === 'payin' ? 'Payin' : 'Payout' }}</span>
+      </template>
+      <template #cell-gatewayFee="{ row }">
+        <span class="text-sm text-text-primary font-medium">{{ formatFee(row.gatewayFeeType, row.gatewayFeeValue) }}</span>
+      </template>
+      <template #cell-platformFee="{ row }">
+        <span class="text-sm text-orange-primary font-medium">{{ formatFee(row.platformFeeType, row.platformFeeValue) }}</span>
+      </template>
+      <template #actions="{ row }">
+        <button
+          class="text-sm font-medium text-orange-primary hover:underline cursor-pointer"
+          @click="openEdit(row)"
+        >Modifier</button>
+      </template>
+    </UiDataTable>
 
     <UiBaseModal :is-open="showEditModal" :title="'Modifier les frais — ' + (editingFee?.operator || '')" size="md" @close="showEditModal = false">
       <div class="flex flex-col gap-5">

@@ -144,15 +144,31 @@
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
             </button>
-            <div class="relative">
+            <div class="relative" data-event-actions-menu>
               <button
                 class="p-2.5 border border-border-light rounded-lg bg-transparent text-text-tertiary cursor-pointer font-sans transition-all duration-150 flex items-center justify-center hover:bg-surface-2 hover:text-text-primary hover:border-border-medium"
                 title="Plus d'actions"
-                @click.stop="evt.showMore = !evt.showMore"
+                @click.stop="events.forEach(e => { if (e !== evt) e.showMore = false }); evt.showMore = !evt.showMore"
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
               </button>
-              <div v-if="evt.showMore" class="absolute right-0 bottom-full mb-1 bg-surface border border-border-light rounded-lg z-10 min-w-[150px] py-1">
+              <div v-if="evt.showMore" class="absolute right-0 bottom-full mb-1 bg-surface border border-border-light rounded-lg z-10 min-w-[200px] py-1">
+                <button
+                  v-if="!evt.isDraft"
+                  class="w-full px-3.5 py-2.5 text-xs text-text-secondary hover:bg-surface-2 hover:text-text-primary text-left flex items-center gap-2 cursor-pointer"
+                  @click="evt.showMore = false; copyMarketingLink(evt)"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                  Copier le lien
+                </button>
+                <button
+                  v-if="!evt.isDraft"
+                  class="w-full px-3.5 py-2.5 text-xs text-text-secondary hover:bg-surface-2 hover:text-text-primary text-left flex items-center gap-2 cursor-pointer"
+                  @click="evt.showMore = false; previewMarketingLink(evt)"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                  Aperçu landing page
+                </button>
                 <button
                   v-if="!evt.isDraft"
                   class="w-full px-3.5 py-2.5 text-xs text-text-secondary hover:bg-surface-2 hover:text-text-primary text-left flex items-center gap-2 cursor-pointer"
@@ -162,7 +178,12 @@
                   Statistiques
                 </button>
                 <button
-                  class="w-full px-3.5 py-2.5 text-xs text-red-error hover:bg-red-dim text-left flex items-center gap-2 cursor-pointer"
+                  class="w-full px-3.5 py-2.5 text-xs text-left flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  :class="(evt.tickets_sold ?? 0) > 0
+                    ? 'text-text-tertiary'
+                    : 'text-red-error hover:bg-red-dim'"
+                  :disabled="(evt.tickets_sold ?? 0) > 0"
+                  :title="(evt.tickets_sold ?? 0) > 0 ? 'Suppression bloquée : des billets ont déjà été vendus' : 'Supprimer cet événement'"
                   @click="evt.showMore = false; openDelete(evt)"
                 >
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
@@ -341,6 +362,7 @@ const mapEvent = (e: any, i: number) => {
     fillColor: fillColors[i % fillColors.length],
     statRevenue: fmtRev,
     statTickets: String(sold),
+    tickets_sold: sold,
     isDraft: e.status === 'draft',
     showMore: false,
     stats: {
@@ -407,12 +429,58 @@ const openStats = (evt: any) => {
 }
 
 const openDelete = (evt: any) => {
+  // Defense in depth: button is disabled when sales exist, but block here too
+  if ((evt?.tickets_sold ?? 0) > 0) {
+    notifyError('Cet événement ne peut pas être supprimé car des billets ont déjà été vendus. Annulez-le plutôt depuis ses paramètres.')
+    return
+  }
   selectedEvent.value = evt
   deleteModalOpen.value = true
 }
 
+const marketingLinkFor = (evt: any): string | null => {
+  if (typeof window === 'undefined') return null
+  const slug = evt?.slug || evt?.id
+  if (!slug) return null
+  return `${window.location.origin}/e/${slug}`
+}
+
+/**
+ * Copy the marketing landing URL (/e/[slug]) to the clipboard.
+ * This is the link organisers paste into Facebook Ads, WhatsApp, Instagram
+ * etc. — it points to a stripped-down conversion page (no BilletEvent chrome).
+ */
+const copyMarketingLink = async (evt: any) => {
+  const url = marketingLinkFor(evt)
+  if (!url) {
+    notifyError('Lien indisponible pour cet événement')
+    return
+  }
+  try {
+    await navigator.clipboard.writeText(url)
+    success('Lien copié — prêt à partager sur WhatsApp, Facebook, Instagram…')
+  } catch {
+    notifyError('Impossible de copier le lien automatiquement. ' + url)
+  }
+}
+
+/** Open the marketing landing in a new tab so the organiser can preview what buyers will see. */
+const previewMarketingLink = (evt: any) => {
+  const url = marketingLinkFor(evt)
+  if (!url) {
+    notifyError('Lien indisponible pour cet événement')
+    return
+  }
+  window.open(url, '_blank', 'noopener,noreferrer')
+}
+
 const confirmDelete = async () => {
   if (!selectedEvent.value) return
+  if ((selectedEvent.value.tickets_sold ?? 0) > 0) {
+    notifyError('Suppression annulée — des billets ont été vendus.')
+    deleteModalOpen.value = false
+    return
+  }
   actionLoading.value = true
   try {
     await api.deleteEvent(selectedEvent.value.id)
@@ -427,5 +495,24 @@ const confirmDelete = async () => {
   }
 }
 
-onMounted(() => loadEvents())
+// Close any open "more actions" dropdown when the user clicks outside of any
+// row's menu — otherwise opening menu A then clicking row B leaves both open
+const closeAllShowMore = (e: MouseEvent) => {
+  if (!(e.target as HTMLElement | null)?.closest('[data-event-actions-menu]')) {
+    events.value.forEach(evt => { if (evt && evt.showMore) evt.showMore = false })
+  }
+}
+
+onMounted(() => {
+  loadEvents()
+  if (typeof document !== 'undefined') {
+    document.addEventListener('click', closeAllShowMore)
+  }
+})
+
+onBeforeUnmount(() => {
+  if (typeof document !== 'undefined') {
+    document.removeEventListener('click', closeAllShowMore)
+  }
+})
 </script>

@@ -27,7 +27,7 @@ const toggleFavorite = () => {
 <template>
   <div class="bg-white rounded-xl border border-border-light overflow-hidden transition-all duration-200 hover:border-orange-primary cursor-pointer group">
     <div class="relative h-44 overflow-hidden">
-      <img v-if="image" :src="image" :alt="title" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+      <NuxtImg v-if="image" :src="image" :alt="title" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" :placeholder="[20, 20]" />
       <div v-else :class="['w-full h-full bg-gradient-to-br', gradient]" />
       <span v-if="category" class="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-text-primary text-xs font-bold px-2.5 py-1 rounded-full">{{ category }}</span>
       <span v-if="eventType === 'enligne'" class="absolute bottom-3 left-3 text-xs font-medium px-2 py-0.5 rounded-full bg-blue-50 text-blue-600">En ligne</span>

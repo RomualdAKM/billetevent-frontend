@@ -22,6 +22,8 @@ onUnmounted(() => {
   <Transition name="fade-up">
     <button
       v-if="visible"
+      type="button"
+      aria-label="Retour en haut de la page"
       class="fixed bottom-8 right-8 z-50 w-12 h-12 bg-blue-main text-white rounded-full flex items-center justify-center cursor-pointer transition-colors duration-200 hover:bg-orange-primary"
       @click="scrollToTop"
     >

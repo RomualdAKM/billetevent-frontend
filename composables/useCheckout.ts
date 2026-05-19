@@ -10,12 +10,23 @@ const PAYMENT_TIMEOUT_MS = 30_000
 export const useCheckout = () => {
   const { success: notifySuccess, error: notifyError } = useNotification()
   const cartStore = useCartStore()
+  const authStore = useAuthStore()
   const { submitCheckout, confirmWizall, validatePromo } = useCheckoutApi()
 
   const { countries: paymentCountries, fetchOperators, getOperatorsForCountry, getCountryInfo } = usePaymentOperators()
 
   // Fetch operators on composable init (cached, only one call)
   fetchOperators()
+
+  // ── Buyer identity (guest checkout) ──
+  // When the user is not logged in, the backend auto-creates a buyer account
+  // from these fields and links the order to it.
+  const isGuest = computed(() => !authStore.isLoggedIn)
+  const guestInfo = ref({
+    name: '',
+    email: '',
+    phone: '',
+  })
 
   // ── Registration data (inscription mode) ──
   const registrationData = ref({
@@ -52,7 +63,8 @@ export const useCheckout = () => {
   )
 
   // ── Form fields ──
-  const paymentMode = ref<'mobile' | 'card' | ''>('')
+  // Default to mobile money — dominant payment method in target markets (SN/CI/BJ/CM)
+  const paymentMode = ref<'mobile' | 'card' | ''>('mobile')
   const selectedCountry = ref('')
   const selectedOperator = ref('')
   const mobileNumber = ref('')
@@ -131,6 +143,15 @@ export const useCheckout = () => {
     if (!eventId.value && cartStore.eventId) {
       eventId.value = cartStore.eventId
     }
+
+    // Prefill guest identity from the authenticated profile when possible
+    if (authStore.isLoggedIn && authStore.user) {
+      const u = authStore.user as Record<string, any>
+      const fullName = [u.first_name, u.last_name].filter(Boolean).join(' ').trim()
+      if (fullName && !guestInfo.value.name) guestInfo.value.name = fullName
+      if (u.email && !guestInfo.value.email) guestInfo.value.email = String(u.email)
+      if (u.phone && !guestInfo.value.phone) guestInfo.value.phone = String(u.phone)
+    }
   }
 
   async function loadEventDetails() {
@@ -167,6 +188,22 @@ export const useCheckout = () => {
 
     if (cartStore.isEmpty) {
       errors.cart = 'Votre panier est vide'
+    }
+
+    // Guest buyers must fill identity fields
+    if (isGuest.value) {
+      if (!guestInfo.value.name.trim()) {
+        errors.guestName = 'Veuillez saisir votre nom complet'
+      }
+      const email = guestInfo.value.email.trim()
+      if (!email) {
+        errors.guestEmail = 'Veuillez saisir votre adresse email'
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        errors.guestEmail = 'Adresse email invalide'
+      }
+      if (!guestInfo.value.phone.trim()) {
+        errors.guestPhone = 'Veuillez saisir votre numéro de téléphone'
+      }
     }
 
     if (!isFreeEvent.value) {
@@ -208,7 +245,8 @@ export const useCheckout = () => {
 
     if (!isFreeEvent.value && paymentMode.value === 'mobile') {
       payload.operator_key = resolveOperatorKey()
-      payload.phone_number = mobileNumber.value
+      // Strip spaces/dashes — backend regex is /^\d{7,15}$/ and would 422 on "77 123 45 67"
+      payload.phone_number = mobileNumber.value.replace(/[\s-]/g, '')
       payload.country_code = selectedCountry.value
     }
 
@@ -224,6 +262,13 @@ export const useCheckout = () => {
       if (registrationData.value.guest_company) payload.guest_company = registrationData.value.guest_company
     }
 
+    // Unauthenticated buyer: pass identity so the backend can provision or attach an account
+    if (isGuest.value) {
+      if (!payload.guest_name) payload.guest_name = guestInfo.value.name.trim()
+      if (!payload.guest_email) payload.guest_email = guestInfo.value.email.trim()
+      if (!payload.guest_phone) payload.guest_phone = guestInfo.value.phone.trim()
+    }
+
     return payload
   }
 
@@ -232,11 +277,15 @@ export const useCheckout = () => {
     const payment = data.payment_response ?? {}
 
     if (payment.payment_url) {
+      // Order is created server-side and we're handing off to the gateway —
+      // free the cart so a back-button or refresh doesn't re-submit the same items
+      cartStore.clearCart()
       if (import.meta.client) window.location.href = payment.payment_url
       return
     }
 
     if (payment.client_secret) {
+      cartStore.clearCart()
       notifySuccess('Redirection vers Stripe...')
       return
     }
@@ -244,19 +293,24 @@ export const useCheckout = () => {
     if (payment.requires_confirmation || selectedOperator.value === 'Wizall') {
       paymentState.value = 'awaiting_confirmation'
       wizallOrderId.value = data.order_id ?? null
+      // Hold the cart until Wizall confirmation succeeds (cleared in confirmWizallCode)
       return
     }
 
     if (data.payment_status === 'pending' || payment.status === 'pending') {
       paymentState.value = 'pending'
       pendingMessage.value = 'Veuillez valider le paiement sur votre téléphone. Vérifiez vos notifications.'
+      // Order exists server-side and is waiting for the buyer's confirmation in their mobile app
+      cartStore.clearCart()
       return
     }
 
     paymentState.value = 'success'
     notifySuccess('Paiement effectué avec succès !')
     cartStore.clearCart()
-    navigateTo(`/orders/${data.reference || data.order_id}`)
+    // Guests get a signed URL so they can land on the confirmation page without a session
+    const target = (data as any).guest_view_url || `/orders/${data.reference || data.order_id}`
+    navigateTo(target)
   }
 
   // ── Main pay action ──
@@ -341,6 +395,8 @@ export const useCheckout = () => {
       notifySuccess('Paiement Wizall confirmé !')
       cartStore.clearCart()
       navigateTo(`/orders/${wizallOrderId.value}`)
+      // Note: Wizall confirms an existing order — at that point the buyer is
+      // expected to have authenticated previously, so no signed URL is needed.
     } catch (err: any) {
       notifyError(err?.data?.message || 'Code Wizall invalide')
     } finally {
@@ -369,6 +425,10 @@ export const useCheckout = () => {
     initFromHistoryState,
     loadEventDetails,
     registrationData,
+
+    // Guest buyer identity
+    isGuest,
+    guestInfo,
 
     // Payment state
     paymentState,

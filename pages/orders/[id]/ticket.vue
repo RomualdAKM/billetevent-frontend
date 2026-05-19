@@ -1,12 +1,20 @@
 <script setup lang="ts">
 import QRCode from 'qrcode'
 
-definePageMeta({ layout: 'default', middleware: 'auth' })
+definePageMeta({ layout: 'default' })
 
 const route = useRoute()
+const authStore = useAuthStore()
 const { info, error: notifyError } = useNotification()
-const { getOrder } = useAccountApi()
+const { getOrder, getGuestOrder } = useAccountApi()
 const config = useRuntimeConfig()
+
+// `?token=...` lets a guest buyer view their ticket(s) without a session — same
+// token that was emailed in GuestAccountWelcome.
+const guestToken = computed(() =>
+  typeof route.query.token === 'string' ? route.query.token : ''
+)
+const hasGuestToken = computed(() => guestToken.value.length > 0)
 
 const loading = ref(true)
 const order = ref<Record<string, any> | null>(null)
@@ -64,9 +72,17 @@ watch([ticket], async () => {
 }, { immediate: true })
 
 async function loadOrder() {
+  // Without a token, only authenticated buyers can view their tickets
+  if (!hasGuestToken.value && !authStore.isLoggedIn) {
+    await navigateTo({ path: '/auth/login', query: { redirect: route.path } })
+    return
+  }
+
   loading.value = true
   try {
-    const res = await getOrder(orderId.value)
+    const res = hasGuestToken.value
+      ? await getGuestOrder(orderId.value, { token: guestToken.value })
+      : await getOrder(orderId.value)
     const data = res?.data ?? res
     order.value = data
 
@@ -96,12 +112,17 @@ async function downloadPdf(ref?: string) {
   }
   info('Le telechargement du PDF va commencer...')
   try {
-    const blob = await $fetch(`/tickets/${targetRef}/download`, {
+    // Guests use the public token-based route; authenticated users go through Sanctum
+    const url = hasGuestToken.value
+      ? `/tickets/${targetRef}/guest-download?token=${encodeURIComponent(guestToken.value)}`
+      : `/tickets/${targetRef}/download`
+    const headers: Record<string, string> = { Accept: 'application/pdf' }
+    if (!hasGuestToken.value) {
+      headers.Authorization = `Bearer ${localStorage.getItem('auth_token')}`
+    }
+    const blob = await $fetch(url, {
       baseURL: String(config.public.apiBase),
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
-        Accept: 'application/pdf',
-      },
+      headers,
       responseType: 'blob',
     })
     const url = URL.createObjectURL(blob)

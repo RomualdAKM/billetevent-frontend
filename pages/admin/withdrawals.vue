@@ -97,6 +97,15 @@ const statusClass = (s: string) => {
   return ''
 }
 
+const withdrawalsTableColumns = [
+  { key: 'organizer', label: 'Organisateur' },
+  { key: 'amount', label: 'Montant', class: 'text-right' },
+  { key: 'method', label: 'Méthode', hideOnMobile: true },
+  { key: 'details', label: 'Détails', hideOnMobile: true },
+  { key: 'date', label: 'Date', hideOnMobile: true },
+  { key: 'status', label: 'Statut' },
+]
+
 const loadWithdrawals = async () => {
   loading.value = true
   try {
@@ -147,68 +156,45 @@ onMounted(loadWithdrawals)
       >Tous ({{ withdrawals.length }})</button>
     </div>
 
-    <div class="bg-surface border border-border-light rounded-xl overflow-hidden">
-      <div class="overflow-x-auto">
-        <table class="w-full hidden md:table">
-          <thead>
-            <tr class="border-b border-border-light">
-              <th class="text-left text-xs font-semibold text-text-tertiary uppercase tracking-wide px-4 py-3">Organisateur</th>
-              <th class="text-right text-xs font-semibold text-text-tertiary uppercase tracking-wide px-4 py-3">Montant</th>
-              <th class="text-left text-xs font-semibold text-text-tertiary uppercase tracking-wide px-4 py-3">Méthode</th>
-              <th class="text-left text-xs font-semibold text-text-tertiary uppercase tracking-wide px-4 py-3">Détails</th>
-              <th class="text-left text-xs font-semibold text-text-tertiary uppercase tracking-wide px-4 py-3">Date</th>
-              <th class="text-left text-xs font-semibold text-text-tertiary uppercase tracking-wide px-4 py-3">Statut</th>
-              <th v-if="activeTab === 'pending'" class="text-right text-xs font-semibold text-text-tertiary uppercase tracking-wide px-4 py-3">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="w in displayList" :key="w.id" class="border-b border-border-light last:border-b-0">
-              <td class="px-4 py-3">
-                <div class="text-sm font-medium text-text-primary">{{ w.organizer }}</div>
-                <div class="text-xs text-text-tertiary">{{ w.email }}</div>
-              </td>
-              <td class="px-4 py-3 text-sm text-text-primary text-right font-semibold">{{ formatPrice(w.amount) }}</td>
-              <td class="px-4 py-3 text-sm text-text-secondary">{{ w.method }}</td>
-              <td class="px-4 py-3 text-sm text-text-secondary max-w-[200px] truncate">{{ getDetails(w) }}</td>
-              <td class="px-4 py-3 text-sm text-text-secondary">{{ formatDate(w.date) }}</td>
-              <td class="px-4 py-3">
-                <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold" :class="statusClass(w.status)">{{ statusLabel(w.status) }}</span>
-              </td>
-              <td v-if="activeTab === 'pending'" class="px-4 py-3 text-right">
-                <div v-if="w.status === 'pending'" class="flex items-center justify-end gap-2">
-                  <button
-                    class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-green-dark text-white border-none cursor-pointer transition-opacity hover:opacity-90"
-                    @click="openApprove(w.id)"
-                  >Approuver</button>
-                  <button
-                    class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-error text-white border-none cursor-pointer transition-opacity hover:opacity-90"
-                    @click="openReject(w.id)"
-                  >Rejeter</button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div class="flex flex-col md:hidden">
-        <div v-for="w in displayList" :key="w.id" class="border-b border-border-light last:border-b-0 p-4">
-          <div class="flex items-center justify-between mb-1">
-            <span class="text-sm font-medium text-text-primary">{{ w.organizer }}</span>
-            <span class="text-sm font-semibold text-text-primary">{{ formatPrice(w.amount) }}</span>
-          </div>
-          <div class="text-xs text-text-secondary mb-1">{{ w.method }} · {{ getDetails(w) }}</div>
-          <div class="flex items-center justify-between">
-            <span class="text-xs text-text-tertiary">{{ formatDate(w.date) }}</span>
-            <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold" :class="statusClass(w.status)">{{ statusLabel(w.status) }}</span>
-          </div>
-          <div v-if="w.status === 'pending'" class="flex items-center gap-2 mt-3">
-            <button class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-green-dark text-white border-none cursor-pointer" @click="openApprove(w.id)">Approuver</button>
-            <button class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-error text-white border-none cursor-pointer" @click="openReject(w.id)">Rejeter</button>
-          </div>
+    <UiDataTable
+      :columns="withdrawalsTableColumns"
+      :rows="displayList"
+      :loading="loading"
+      empty-title="Aucune demande de retrait"
+      empty-description="Il n'y a aucune demande à afficher."
+    >
+      <template #cell-organizer="{ row }">
+        <div class="text-sm font-medium text-text-primary">{{ row.organizer }}</div>
+        <div class="text-xs text-text-tertiary">{{ row.email }}</div>
+      </template>
+      <template #cell-amount="{ row }">
+        <span class="text-sm text-text-primary font-semibold">{{ formatPrice(row.amount) }}</span>
+      </template>
+      <template #cell-method="{ row }">
+        <span class="text-sm text-text-secondary">{{ row.method }}</span>
+      </template>
+      <template #cell-details="{ row }">
+        <span class="text-sm text-text-secondary block max-w-[200px] truncate">{{ getDetails(row) }}</span>
+      </template>
+      <template #cell-date="{ row }">
+        <span class="text-sm text-text-secondary">{{ formatDate(row.date) }}</span>
+      </template>
+      <template #cell-status="{ row }">
+        <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold" :class="statusClass(row.status)">{{ statusLabel(row.status) }}</span>
+      </template>
+      <template v-if="activeTab === 'pending'" #actions="{ row }">
+        <div v-if="row.status === 'pending'" class="flex items-center justify-end gap-2">
+          <button
+            class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-green-dark text-white border-none cursor-pointer transition-opacity hover:opacity-90"
+            @click="openApprove(row.id)"
+          >Approuver</button>
+          <button
+            class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-error text-white border-none cursor-pointer transition-opacity hover:opacity-90"
+            @click="openReject(row.id)"
+          >Rejeter</button>
         </div>
-      </div>
-    </div>
+      </template>
+    </UiDataTable>
 
     <UiConfirmModal
       :is-open="showApproveConfirm"

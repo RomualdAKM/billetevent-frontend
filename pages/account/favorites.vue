@@ -117,11 +117,13 @@ const getEventBadge = (event: any) => {
           <NuxtLink :to="`/events/${event.slug || event.id}`" class="block no-underline">
             <!-- Cover image -->
             <div class="relative h-40 bg-surface-2 overflow-hidden">
-              <img
+              <NuxtImg
                 v-if="event.flyer_url"
                 :src="event.flyer_url"
                 :alt="event.title"
                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                loading="lazy"
+                :placeholder="[20, 20]"
               />
               <div v-else class="w-full h-full flex items-center justify-center bg-gradient-to-br from-orange-dim to-surface-2">
                 <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-text-tertiary/30">

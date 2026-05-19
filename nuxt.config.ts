@@ -3,13 +3,24 @@ import tailwindcss from "@tailwindcss/vite";
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
-  modules: ['@pinia/nuxt'],
-  imports: {
-    dirs: ['composables/api'],
-  },
+  modules: ['@pinia/nuxt', '@nuxt/fonts', '@nuxt/image'],
   css: ['~/assets/css/main.css'],
   vite: {
     plugins: [tailwindcss()],
+  },
+  // @nuxt/fonts downloads DM Sans + DM Serif Display at build time and
+  // self-hosts them with proper preload + font-display: swap. Removes the
+  // render-blocking <link> to fonts.googleapis.com — big LCP win on 3G/4G.
+  fonts: {
+    families: [
+      { name: 'DM Sans', provider: 'google', weights: [300, 400, 500, 600, 700] },
+      { name: 'DM Serif Display', provider: 'google', weights: [400] },
+    ],
+  },
+  image: {
+    // Sensible defaults for buyer-facing imagery; pages opt into specific sizes via :sizes
+    format: ['avif', 'webp'],
+    quality: 80,
   },
   runtimeConfig: {
     public: {
@@ -31,12 +42,6 @@ export default defineNuxtConfig({
       ],
       link: [
         { rel: 'icon', type: 'image/png', href: '/favicon.png' },
-        { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
-        { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
-        {
-          rel: 'stylesheet',
-          href: 'https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Serif+Display&display=swap',
-        },
       ],
     },
   },

@@ -16,15 +16,46 @@ const totalBalance = ref(0)
 const availableBalance = ref(0)
 const pendingBalance = ref(0)
 
-const kycStatus = computed(() => authStore.user?.kyc_status)
-const kycValidated = computed(() => kycStatus.value === 'validated')
-const kycBannerType = computed(() => {
-  const status = kycStatus.value
-  if (status === 'validated') return 'none'
-  if (status === 'submitted') return 'submitted'
-  if (status === 'rejected') return 'rejected'
-  return 'pending'
+const kycValidated = computed(() => authStore.user?.kyc_status === 'validated')
+
+// ── Withdrawal form validation & breakdown ───────────────────
+const WITHDRAW_MIN = 5000
+
+const withdrawAmountError = computed(() => {
+  const raw = withdrawAmount.value
+  if (raw === '' || raw === null || raw === undefined) return ''
+  const amount = Number(raw)
+  if (!Number.isFinite(amount) || amount <= 0) return 'Veuillez saisir un montant valide'
+  if (amount < WITHDRAW_MIN) return `Le montant minimum est de ${new Intl.NumberFormat('fr-FR').format(WITHDRAW_MIN)} F CFA`
+  if (amount > availableBalance.value) return `Solde insuffisant (disponible : ${new Intl.NumberFormat('fr-FR').format(availableBalance.value)} F CFA)`
+  return ''
 })
+
+const isWithdrawValid = computed(() => {
+  const amount = Number(withdrawAmount.value)
+  if (!Number.isFinite(amount) || amount < WITHDRAW_MIN || amount > availableBalance.value) return false
+  if (withdrawMethod.value === 'mobile') {
+    return !!selectedCountry.value && !!selectedOperator.value && mobileNumber.value.trim().length >= 7
+  }
+  if (withdrawMethod.value === 'bank') {
+    return !!bankName.value.trim() && !!iban.value.trim() && !!accountHolder.value.trim()
+  }
+  return false
+})
+
+// Operator fees are settled with the gateway before payout; the buyer's
+// requested amount is what they receive. We surface the breakdown for clarity
+// even when the fee is zero — transparency builds trust.
+const withdrawFee = computed(() => 0)
+const withdrawNet = computed(() => {
+  const amount = Number(withdrawAmount.value)
+  return Number.isFinite(amount) && amount > 0 ? Math.max(0, amount - withdrawFee.value) : 0
+})
+const withdrawDelay = computed(() =>
+  withdrawMethod.value === 'mobile'
+    ? '24 à 72 heures'
+    : withdrawMethod.value === 'bank' ? '2 à 5 jours ouvrés' : ''
+)
 
 const formatPrice = (price: number) => new Intl.NumberFormat('fr-FR').format(price) + ' F CFA'
 
@@ -197,36 +228,7 @@ onMounted(async () => {
   <div class="flex flex-col gap-6">
     <UiPageHeader title="Mon portefeuille" subtitle="Gérez vos revenus et demandes de retrait" />
 
-    <!-- KYC Banner: pending -->
-    <div v-if="kycBannerType === 'pending'" class="flex items-center justify-between bg-gold-dim border border-[rgba(217,119,6,0.2)] rounded-xl px-5 py-3.5">
-      <div class="flex items-center gap-3">
-        <div class="w-8 h-8 rounded-full bg-gold/10 flex items-center justify-center shrink-0">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        </div>
-        <p class="text-sm text-gold font-medium">Complétez votre vérification d'identité pour activer les retraits.</p>
-      </div>
-      <NuxtLink to="/dashboard/kyc" class="text-sm text-gold font-semibold hover:underline whitespace-nowrap ml-4">Compléter →</NuxtLink>
-    </div>
-    <!-- KYC Banner: submitted -->
-    <div v-else-if="kycBannerType === 'submitted'" class="flex items-center justify-between bg-blue-dim border border-[rgba(27,43,94,0.12)] rounded-xl px-5 py-3.5">
-      <div class="flex items-center gap-3">
-        <div class="w-8 h-8 rounded-full bg-blue-dim flex items-center justify-center shrink-0">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-blue-light)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        </div>
-        <p class="text-sm text-blue-main font-medium">Vos documents sont en cours de vérification. Délai estimé : 24-48h.</p>
-      </div>
-      <NuxtLink to="/dashboard/kyc" class="text-sm text-blue-light font-semibold hover:underline whitespace-nowrap ml-4">Voir le statut →</NuxtLink>
-    </div>
-    <!-- KYC Banner: rejected -->
-    <div v-else-if="kycBannerType === 'rejected'" class="flex items-center justify-between bg-red-dim border border-[rgba(220,38,38,0.15)] rounded-xl px-5 py-3.5">
-      <div class="flex items-center gap-3">
-        <div class="w-8 h-8 rounded-full bg-red-dim flex items-center justify-center shrink-0">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-red-error)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-        </div>
-        <p class="text-sm text-red-error font-medium">Votre vérification a été refusée. Veuillez resoumettre vos documents.</p>
-      </div>
-      <NuxtLink to="/dashboard/kyc" class="text-sm text-red-error font-semibold hover:underline whitespace-nowrap ml-4">Resoumettre →</NuxtLink>
-    </div>
+    <DashboardKycBanner pending-message="Complétez votre vérification d'identité pour activer les retraits." />
 
     <!-- Balance Card — Premium -->
     <div class="bg-surface border border-border-light rounded-xl p-8">
@@ -303,10 +305,38 @@ onMounted(async () => {
           <input
             v-model="withdrawAmount"
             type="number"
+            inputmode="numeric"
+            min="5000"
+            :max="availableBalance"
             placeholder="Ex: 500000"
-            class="border border-border-light rounded-lg px-4 py-3 w-full text-base bg-white focus:border-orange-primary focus:outline-none transition-[border-color] duration-150"
+            class="border rounded-lg px-4 py-3 w-full text-base bg-white focus:outline-none transition-[border-color] duration-150"
+            :class="withdrawAmountError ? 'border-red-error focus:border-red-error' : 'border-border-light focus:border-orange-primary'"
           />
-          <div class="text-xs text-text-tertiary mt-1.5">Minimum : 5 000 F CFA</div>
+          <div v-if="withdrawAmountError" class="text-xs text-red-error mt-1.5">{{ withdrawAmountError }}</div>
+          <div v-else class="text-xs text-text-tertiary mt-1.5">Minimum : 5 000 F CFA</div>
+        </div>
+
+        <!-- Live breakdown — shown once the buyer has chosen a method -->
+        <div
+          v-if="withdrawMethod && withdrawNet > 0 && !withdrawAmountError"
+          class="rounded-lg border border-border-light bg-bg-primary px-4 py-3.5"
+        >
+          <div class="flex justify-between text-sm text-text-secondary mb-1.5">
+            <span>Montant demandé</span>
+            <span class="text-text-primary font-medium">{{ formatPrice(Number(withdrawAmount) || 0) }}</span>
+          </div>
+          <div class="flex justify-between text-sm text-text-secondary mb-1.5">
+            <span>Frais de retrait</span>
+            <span class="text-text-primary font-medium">{{ withdrawFee === 0 ? 'Aucun' : formatPrice(withdrawFee) }}</span>
+          </div>
+          <div class="h-px bg-border-light my-2"></div>
+          <div class="flex justify-between text-sm">
+            <span class="font-semibold text-text-primary">Vous recevrez</span>
+            <span class="font-bold text-green-dark">{{ formatPrice(withdrawNet) }}</span>
+          </div>
+          <div v-if="withdrawDelay" class="text-xs text-text-tertiary mt-2">
+            Délai estimé : {{ withdrawDelay }}
+          </div>
         </div>
 
         <div>
@@ -398,7 +428,7 @@ onMounted(async () => {
 
         <button
           class="bg-orange-primary text-white w-full py-3.5 rounded-xl font-semibold border-none cursor-pointer transition-opacity hover:opacity-90 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed text-sm"
-          :disabled="withdrawLoading"
+          :disabled="withdrawLoading || !isWithdrawValid"
           @click="handleWithdraw"
         >
           <svg v-if="withdrawLoading" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>

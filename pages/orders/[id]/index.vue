@@ -1,10 +1,26 @@
 <script setup lang="ts">
-definePageMeta({ layout: 'default', middleware: 'auth' })
+definePageMeta({ layout: 'default' })
 
 const route = useRoute()
+const authStore = useAuthStore()
 const orderId = route.params.id as string
 const api = useAccountApi()
 const { initPixels, trackPurchase } = useTracking()
+
+// A `token` query param means the buyer arrived through the magic link
+// sent by GuestAccountWelcome — fetch the order through the public guest
+// route using that token instead of the authenticated route.
+const guestToken = computed(() =>
+  typeof route.query.token === 'string' ? route.query.token : ''
+)
+const hasGuestToken = computed(() => guestToken.value.length > 0)
+const isGuestView = computed(() => hasGuestToken.value && !authStore.isLoggedIn)
+const activateAccountLink = computed(() => {
+  const email = order.value?.user?.email || order.value?.guest_email
+  return email
+    ? `/auth/forgot-password?email=${encodeURIComponent(email)}`
+    : '/auth/forgot-password'
+})
 
 const loading = ref(true)
 const order = ref<Record<string, any> | null>(null)
@@ -22,6 +38,11 @@ const formatDate = (dateStr: string) => {
   return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 }
 
+const fetchOrder = () =>
+  hasGuestToken.value
+    ? api.getGuestOrder(orderId, { token: guestToken.value })
+    : api.getOrder(orderId)
+
 const stopPolling = () => {
   if (pollInterval) { clearInterval(pollInterval); pollInterval = null }
   if (pollTimeout) { clearTimeout(pollTimeout); pollTimeout = null }
@@ -31,11 +52,10 @@ const startPolling = () => {
   stopPolling()
   pollInterval = setInterval(async () => {
     try {
-      const res = await api.getOrder(orderId)
+      const res = await fetchOrder()
       order.value = res?.data ?? res
       if (order.value?.status !== 'pending') {
         stopPolling()
-        // Tracker l'achat quand le statut passe à paid
         maybeTrackPurchase()
       }
     } catch { /* silently ignore polling errors */ }
@@ -44,12 +64,18 @@ const startPolling = () => {
 }
 
 const loadOrder = async () => {
+  // Without a token, only authenticated buyers can view an order
+  if (!hasGuestToken.value && !authStore.isLoggedIn) {
+    // Strip query (might leak nothing here, but be consistent with other middleware)
+    await navigateTo({ path: '/auth/login', query: { redirect: route.path } })
+    return
+  }
+
   loading.value = true
   try {
-    const res = await api.getOrder(orderId)
+    const res = await fetchOrder()
     order.value = res?.data ?? res
     if (order.value?.status === 'pending') startPolling()
-    // Tracker l'achat si déjà payé au chargement initial
     maybeTrackPurchase()
   } catch {
     showError({ statusCode: 404, statusMessage: 'Commande introuvable' })
@@ -180,12 +206,32 @@ onBeforeUnmount(() => stopPolling())
       <!-- Email notice -->
       <p v-if="order.status === 'paid'" class="text-sm text-text-tertiary mb-8">Un email de confirmation a ete envoye a votre adresse.</p>
 
+      <!-- Guest activation banner -->
+      <div
+        v-if="isGuestView && order.status === 'paid'"
+        class="mb-6 rounded-lg border border-orange-primary/30 bg-orange-dim/40 p-4"
+      >
+        <div class="flex items-start gap-3">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-orange-primary shrink-0 mt-0.5"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+          <div class="flex-1">
+            <p class="text-sm font-semibold text-text-primary mb-1">Activez votre compte BilletEvent</p>
+            <p class="text-sm text-text-secondary mb-3">
+              Un compte a été créé avec votre adresse. Définissez un mot de passe pour retrouver vos billets et commandes à tout moment.
+            </p>
+            <NuxtLink :to="activateAccountLink" class="inline-flex items-center gap-1.5 text-sm font-semibold text-orange-primary hover:underline">
+              Définir mon mot de passe
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </NuxtLink>
+          </div>
+        </div>
+      </div>
+
       <!-- Actions -->
       <div class="flex items-center gap-3 flex-wrap">
-        <NuxtLink v-if="order.status === 'paid'" :to="`/orders/${orderId}/ticket`" class="inline-flex items-center justify-center px-5 py-2.5 bg-orange-primary text-white rounded-lg text-sm font-medium no-underline transition-colors hover:bg-orange-light">
+        <NuxtLink v-if="order.status === 'paid'" :to="`/orders/${orderId}/ticket${hasGuestToken ? '?token=' + encodeURIComponent(guestToken) : ''}`" class="inline-flex items-center justify-center px-5 py-2.5 bg-orange-primary text-white rounded-lg text-sm font-medium no-underline transition-colors hover:bg-orange-light">
           Voir mes billets
         </NuxtLink>
-        <NuxtLink to="/account/orders" class="inline-flex items-center justify-center px-5 py-2.5 border border-border-light text-text-primary rounded-lg text-sm font-medium no-underline transition-colors hover:border-text-tertiary">
+        <NuxtLink v-if="!isGuestView" to="/account/orders" class="inline-flex items-center justify-center px-5 py-2.5 border border-border-light text-text-primary rounded-lg text-sm font-medium no-underline transition-colors hover:border-text-tertiary">
           Mes commandes
         </NuxtLink>
       </div>

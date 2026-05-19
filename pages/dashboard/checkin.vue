@@ -132,6 +132,9 @@ async function loadAllData() {
 function startAutoRefresh() {
   stopAutoRefresh()
   refreshInterval = setInterval(() => {
+    // Skip the poll when the tab is hidden — saves bandwidth on mobile and
+    // avoids hitting the API while the organiser is doing something else.
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
     if (selectedEvent.value) loadCheckinData()
   }, 30000)
 }
@@ -140,6 +143,14 @@ function stopAutoRefresh() {
   if (refreshInterval) {
     clearInterval(refreshInterval)
     refreshInterval = null
+  }
+}
+
+// Force-refresh when the tab becomes visible again so the organiser sees
+// up-to-date counters as soon as they switch back.
+const onVisibilityChange = () => {
+  if (typeof document !== 'undefined' && document.visibilityState === 'visible' && selectedEvent.value) {
+    loadCheckinData()
   }
 }
 
@@ -193,9 +204,15 @@ const resetScan = () => {
 
 onMounted(() => {
   loadEvents()
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', onVisibilityChange)
+  }
 })
 
 onBeforeUnmount(() => {
+  if (typeof document !== 'undefined') {
+    document.removeEventListener('visibilitychange', onVisibilityChange)
+  }
   stopAutoRefresh()
 })
 </script>

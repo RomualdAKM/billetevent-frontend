@@ -42,9 +42,9 @@ const handleLogout = async () => {
         >
           <div class="flex items-center justify-between px-6 py-5 border-b border-border-light">
             <NuxtLink to="/" class="flex items-center gap-2" @click="emit('close')">
-              <img src="/logo.png" alt="BilletEvent" class="h-10 w-auto" />
+              <NuxtImg src="/logo.png" alt="BilletEvent" class="h-10 w-auto" :width="40" :height="40" />
             </NuxtLink>
-            <button class="w-9 h-9 rounded-lg bg-surface-2 flex items-center justify-center" @click="emit('close')">
+            <button type="button" aria-label="Fermer le menu" class="w-9 h-9 rounded-lg bg-surface-2 flex items-center justify-center" @click="emit('close')">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
                 <line x1="18" y1="6" x2="6" y2="18" />
                 <line x1="6" y1="6" x2="18" y2="18" />

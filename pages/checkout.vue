@@ -1,5 +1,5 @@
 <script setup lang="ts">
-definePageMeta({ layout: 'default', middleware: 'auth' })
+definePageMeta({ layout: 'default' })
 
 const {
   eventId,
@@ -7,12 +7,15 @@ const {
   eventName,
   eventDate,
   eventLocation,
+  eventData,
   isFreeEvent,
   accessMode,
   isLibre,
   isInscription,
   initFromHistoryState,
   loadEventDetails,
+  isGuest,
+  guestInfo,
   paymentState,
   isProcessing,
   paymentMode,
@@ -196,6 +199,49 @@ const operatorOptions = computed(() =>
         <!-- Form column -->
         <div class="order-last md:order-first flex flex-col gap-8">
 
+          <!-- Section: Guest buyer identity (unauthenticated checkout) -->
+          <div v-if="isGuest" class="flex flex-col gap-4">
+            <div>
+              <h2 class="text-lg font-semibold text-text-primary">Vos informations</h2>
+              <p class="text-sm text-text-secondary mt-1">
+                Vous recevrez vos billets à cette adresse email.
+                <NuxtLink
+                  :to="{ path: '/auth/login', query: { redirect: '/checkout' } }"
+                  class="text-orange-primary font-medium hover:underline"
+                >Déjà un compte ? Se connecter</NuxtLink>
+              </p>
+            </div>
+            <UiBaseInput
+              v-model="guestInfo.name"
+              label="Nom complet"
+              autocomplete="name"
+              autocapitalize="words"
+              placeholder="Awa Diallo"
+              :error="formErrors.guestName"
+            />
+            <UiBaseInput
+              v-model="guestInfo.email"
+              label="Adresse email"
+              type="email"
+              autocomplete="email"
+              inputmode="email"
+              autocapitalize="off"
+              autocorrect="off"
+              spellcheck="false"
+              placeholder="vous@example.com"
+              :error="formErrors.guestEmail"
+            />
+            <UiBaseInput
+              v-model="guestInfo.phone"
+              label="Numéro de téléphone"
+              type="tel"
+              autocomplete="tel"
+              inputmode="tel"
+              placeholder="+221 77 123 45 67"
+              :error="formErrors.guestPhone"
+            />
+          </div>
+
           <!-- Section: Informations -->
           <div v-if="isFreeEvent" class="flex flex-col gap-4">
             <h2 class="text-lg font-semibold text-text-primary">Informations</h2>
@@ -284,6 +330,8 @@ const operatorOptions = computed(() =>
                     v-model="mobileNumber"
                     label="Numero de telephone"
                     type="tel"
+                    autocomplete="tel-national"
+                    inputmode="tel"
                     placeholder="77 123 45 67"
                     :prefix="countryDialCode"
                     :error="formErrors.phone"
@@ -331,6 +379,8 @@ const operatorOptions = computed(() =>
               <UiBaseInput
                 v-model="wizallCode"
                 placeholder="Code d'autorisation"
+                inputmode="numeric"
+                autocomplete="one-time-code"
               />
               <UiBaseButton
                 variant="primary"

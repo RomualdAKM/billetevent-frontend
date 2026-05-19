@@ -18,11 +18,62 @@ const sizeClasses = computed(() => {
   return sizes[props.size || 'md']
 })
 
+// ── Focus management ────────────────────────────────────────
+// Remember whoever triggered the modal so we can give them focus back on close
+const dialogRef = ref<HTMLElement | null>(null)
+let previouslyFocused: HTMLElement | null = null
+
+const focusableSelectors = [
+  'a[href]',
+  'button:not([disabled])',
+  'textarea:not([disabled])',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(',')
+
+const getFocusable = (): HTMLElement[] => {
+  if (!dialogRef.value) return []
+  return Array.from(dialogRef.value.querySelectorAll<HTMLElement>(focusableSelectors))
+    .filter(el => !el.hasAttribute('inert') && el.offsetParent !== null)
+}
+
+const trapTab = (e: KeyboardEvent) => {
+  if (e.key !== 'Tab') return
+  const focusable = getFocusable()
+  if (focusable.length === 0) {
+    e.preventDefault()
+    return
+  }
+  const first = focusable[0]
+  const last = focusable[focusable.length - 1]
+  const active = document.activeElement as HTMLElement | null
+  if (e.shiftKey && active === first) {
+    e.preventDefault()
+    last.focus()
+  } else if (!e.shiftKey && active === last) {
+    e.preventDefault()
+    first.focus()
+  }
+}
+
 watch(
   () => props.isOpen,
-  (open) => {
-    if (import.meta.client) {
-      document.body.style.overflow = open ? 'hidden' : ''
+  async (open) => {
+    if (!import.meta.client) return
+    if (open) {
+      document.body.style.overflow = 'hidden'
+      previouslyFocused = (document.activeElement as HTMLElement | null) ?? null
+      await nextTick()
+      const focusable = getFocusable()
+      // Focus first interactive element inside the modal (skip the close button when possible)
+      const target = focusable.find(el => !el.hasAttribute('data-modal-close')) ?? focusable[0]
+      target?.focus()
+    } else {
+      document.body.style.overflow = ''
+      // Restore focus to whatever opened the modal
+      previouslyFocused?.focus?.()
+      previouslyFocused = null
     }
   },
 )
@@ -35,6 +86,19 @@ onUnmounted(() => {
 
 const onOverlayClick = () => emit('close')
 const onClose = () => emit('close')
+
+// Close on Escape — standard modal contract
+const onKeydown = (e: KeyboardEvent) => {
+  if (!props.isOpen) return
+  if (e.key === 'Escape') onClose()
+  else if (e.key === 'Tab') trapTab(e)
+}
+onMounted(() => {
+  if (import.meta.client) window.addEventListener('keydown', onKeydown)
+})
+onUnmounted(() => {
+  if (import.meta.client) window.removeEventListener('keydown', onKeydown)
+})
 </script>
 
 <template>
@@ -42,6 +106,9 @@ const onClose = () => emit('close')
     <Transition name="modal">
       <div
         v-if="isOpen"
+        role="dialog"
+        aria-modal="true"
+        :aria-labelledby="title ? 'base-modal-title' : undefined"
         class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
       >
         <div
@@ -50,6 +117,7 @@ const onClose = () => emit('close')
         />
 
         <div
+          ref="dialogRef"
           :class="[
             'relative w-full bg-surface rounded-xl flex flex-col max-h-[90vh]',
             'max-sm:!max-w-none max-sm:h-full max-sm:max-h-full max-sm:rounded-none',
@@ -57,9 +125,11 @@ const onClose = () => emit('close')
           ]"
         >
           <div class="flex items-center justify-between px-6 py-4 border-b border-border-light shrink-0">
-            <h2 class="text-lg font-semibold text-text-primary">{{ title }}</h2>
+            <h2 id="base-modal-title" class="text-lg font-semibold text-text-primary">{{ title }}</h2>
             <button
               type="button"
+              data-modal-close
+              aria-label="Fermer"
               class="w-8 h-8 flex items-center justify-center rounded-lg text-text-tertiary hover:bg-surface-2 hover:text-text-primary transition-colors"
               @click="onClose"
             >

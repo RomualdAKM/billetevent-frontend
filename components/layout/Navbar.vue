@@ -73,7 +73,7 @@ onUnmounted(() => {
 <template>
   <nav class="sticky top-0 z-[200] bg-bg-primary/92 backdrop-blur-[20px] border-b border-border-light px-5 md:px-10 h-16 flex items-center justify-between">
     <NuxtLink to="/" class="flex items-center gap-2.5 font-sans text-[1.15rem] font-bold text-text-primary tracking-tight">
-      <img src="/logo.png" alt="BilletEvent" class="h-14 w-auto" />
+      <NuxtImg src="/logo.png" alt="BilletEvent" class="h-14 w-auto" :width="56" :height="56" preload />
     </NuxtLink>
 
     <div class="flex items-center gap-2.5">
@@ -106,6 +106,10 @@ onUnmounted(() => {
             <span v-if="notificationStore.unreadCount > 0" class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">{{ notificationStore.unreadCount > 9 ? '9+' : notificationStore.unreadCount }}</span>
           </NuxtLink>
           <button
+            type="button"
+            aria-label="Menu utilisateur"
+            :aria-expanded="dropdownOpen"
+            aria-haspopup="menu"
             class="flex items-center gap-2 cursor-pointer"
             @click="dropdownOpen = !dropdownOpen"
           >
@@ -160,6 +164,9 @@ onUnmounted(() => {
       </div>
 
       <button
+        type="button"
+        :aria-label="mobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'"
+        :aria-expanded="mobileMenuOpen"
         class="flex md:hidden w-9 h-9 bg-surface-2 rounded-lg items-center justify-center"
         @click="mobileMenuOpen = !mobileMenuOpen"
       >

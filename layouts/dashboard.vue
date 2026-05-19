@@ -23,7 +23,7 @@
       :class="sidebarCollapsed ? 'lg:ml-16' : 'lg:ml-60'"
     >
       <DashboardHeader @toggle-sidebar="sidebarOpenMobile = !sidebarOpenMobile" />
-      <main class="flex-1 w-full box-border overflow-x-hidden p-6 md:p-8">
+      <main id="main" class="flex-1 w-full box-border overflow-x-hidden p-6 md:p-8">
         <div class="max-w-7xl mx-auto">
           <slot />
         </div>
