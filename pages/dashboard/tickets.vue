@@ -452,7 +452,7 @@ const confirmRefund = async () => {
   refundLoading.value = true
   try {
     const orderId = selectedRow.value.orderId?.replace('#', '') || selectedRow.value.id
-    await api.getParticipants({ ticket_id: orderId })
+    await api.refundOrder(orderId)
     selectedRow.value.status = 'refunded'
     selectedRow.value.statusLabel = 'Remboursé'
     selectedRow.value.statusClass = 'text-text-secondary'

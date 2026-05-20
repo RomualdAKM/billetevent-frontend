@@ -109,8 +109,8 @@ export const useApi = () => {
   const patch = <T = any>(url: string, data?: any) =>
     request<T>(url, { method: 'PATCH', body: data })
 
-  const del = <T = any>(url: string) =>
-    request<T>(url, { method: 'DELETE' })
+  const del = <T = any>(url: string, data?: any) =>
+    request<T>(url, { method: 'DELETE', body: data })
 
   return { get, post, put, patch, delete: del }
 }

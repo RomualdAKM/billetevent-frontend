@@ -10,24 +10,41 @@
           <span class="text-white text-3xl font-bold">{{ organizer.initials || (organizer.display_name || organizer.name)?.substring(0, 2)?.toUpperCase() || 'OR' }}</span>
         </div>
         <div class="flex-1 text-center md:text-left">
-          <h1 class="font-serif text-2xl text-text-primary mb-2">{{ organizer.display_name || organizer.name }}</h1>
+          <h1 class="font-serif text-2xl text-text-primary mb-2">{{ displayName }}</h1>
           <div class="flex items-center justify-center md:justify-start gap-3 text-sm text-text-secondary mb-3">
             <span>{{ organizer.events_count || 0 }} événements</span>
             <span class="w-1 h-1 rounded-full bg-text-tertiary" />
             <span>{{ followersCount }} abonnés</span>
           </div>
-          <p class="text-sm text-text-secondary max-w-xl mb-4">
-            {{ organizer.description || '' }}
+          <p v-if="organizer.description || organizer.bio" class="text-sm text-text-secondary max-w-xl mb-4 whitespace-pre-line">
+            {{ organizer.description || organizer.bio }}
           </p>
-          <button
-            v-if="showFollowButton"
-            :disabled="followLoading"
-            class="px-4 py-1.5 rounded-full text-sm font-medium transition-colors cursor-pointer"
-            :class="isFollowing ? 'border border-orange-primary text-orange-primary hover:bg-orange-50' : 'bg-orange-primary text-white hover:bg-orange-600'"
-            @click="toggleFollow"
-          >
-            {{ isFollowing ? 'Suivi' : 'Suivre' }}
-          </button>
+          <div class="flex items-center justify-center md:justify-start gap-3 flex-wrap">
+            <button
+              v-if="showFollowButton"
+              :disabled="followLoading"
+              class="px-4 py-1.5 rounded-full text-sm font-medium transition-colors cursor-pointer"
+              :class="isFollowing ? 'border border-orange-primary text-orange-primary hover:bg-orange-dim' : 'bg-orange-primary text-white hover:bg-orange-light'"
+              @click="toggleFollow"
+            >
+              {{ isFollowing ? 'Suivi' : 'Suivre' }}
+            </button>
+            <!-- Liens réseaux sociaux : affichés uniquement si l'organisateur les a renseignés -->
+            <div v-if="organizer.website || organizer.facebook || organizer.instagram || organizer.twitter" class="flex items-center gap-1.5">
+              <a v-if="organizer.website" :href="organizer.website" target="_blank" rel="noopener noreferrer" aria-label="Site web" class="w-9 h-9 rounded-full border border-border-light flex items-center justify-center text-text-secondary hover:border-orange-primary hover:text-orange-primary transition-colors">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+              </a>
+              <a v-if="organizer.facebook" :href="organizer.facebook" target="_blank" rel="noopener noreferrer" aria-label="Facebook" class="w-9 h-9 rounded-full border border-border-light flex items-center justify-center text-text-secondary hover:border-orange-primary hover:text-orange-primary transition-colors">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M22 12a10 10 0 1 0-11.56 9.88v-6.99H7.9V12h2.54V9.8c0-2.51 1.5-3.9 3.78-3.9 1.1 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56V12h2.77l-.44 2.89h-2.33v6.99A10 10 0 0 0 22 12z"/></svg>
+              </a>
+              <a v-if="organizer.instagram" :href="organizer.instagram" target="_blank" rel="noopener noreferrer" aria-label="Instagram" class="w-9 h-9 rounded-full border border-border-light flex items-center justify-center text-text-secondary hover:border-orange-primary hover:text-orange-primary transition-colors">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+              </a>
+              <a v-if="organizer.twitter" :href="organizer.twitter" target="_blank" rel="noopener noreferrer" aria-label="Twitter / X" class="w-9 h-9 rounded-full border border-border-light flex items-center justify-center text-text-secondary hover:border-orange-primary hover:text-orange-primary transition-colors">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+              </a>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -131,9 +148,10 @@
           </label>
           <button
             type="submit"
-            class="bg-orange-primary text-white px-6 py-2.5 rounded-xl text-sm font-semibold cursor-pointer border-none transition-colors hover:bg-orange-light"
+            :disabled="contactSubmitting"
+            class="bg-orange-primary text-white px-6 py-2.5 rounded-xl text-sm font-semibold cursor-pointer border-none transition-colors hover:bg-orange-light disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            Envoyer
+            {{ contactSubmitting ? 'Envoi…' : 'Envoyer' }}
           </button>
         </form>
         <div class="flex flex-col gap-5">
@@ -173,7 +191,7 @@ definePageMeta({ layout: 'default' })
 
 const route = useRoute()
 const authStore = useAuthStore()
-const { getOrganizerProfile, getOrganizerEvents } = usePublicApi()
+const { getOrganizerProfile, getOrganizerEvents, sendOrganizerInquiry } = usePublicApi()
 
 const id = String(route.params.id ?? '')
 
@@ -207,6 +225,24 @@ onMounted(async () => {
 const organizerId = computed(() => organizer.value?.id ?? null)
 const initialFollowing = computed(() => !!organizer.value?.is_following)
 const { isFollowing, followersCount, loading: followLoading, toggleFollow, setFollowersCount } = useFollowOrganizer(organizerId, initialFollowing)
+
+// Display name avec dédoublonnage : si first_name === last_name (cas où
+// l'organisateur a saisi le même mot deux fois à l'inscription, ex "Romuald
+// Romuald"), on n'affiche le nom qu'une seule fois.
+const displayName = computed(() => {
+  const o = organizer.value
+  if (!o) return ''
+  const first = (o.first_name || '').trim()
+  const last = (o.last_name || '').trim()
+  const dedup = first && last && first.toLowerCase() === last.toLowerCase()
+    ? first
+    : [first, last].filter(Boolean).join(' ')
+  const candidate = (o.display_name || o.name || '').trim()
+  if (candidate && dedup && candidate.toLowerCase() === `${first} ${last}`.toLowerCase()) {
+    return dedup
+  }
+  return candidate || dedup || 'Organisateur'
+})
 
 // Synchroniser followersCount quand l'organisateur est chargé
 watch(organizer, (org) => {
@@ -247,10 +283,38 @@ const contactForm = ref({
   subscribe: false
 })
 
-const { success: contactSuccess } = useNotification()
-const handleContact = () => {
-  contactSuccess('Votre message a été envoyé avec succès !')
-  contactForm.value = { name: '', email: '', subject: '', message: '', subscribe: false }
+const { success: contactSuccess, error: contactError, info: contactInfo } = useNotification()
+const contactSubmitting = ref(false)
+
+const handleContact = async () => {
+  if (!organizer.value?.id) return
+  if (!contactForm.value.subject) {
+    contactError('Veuillez choisir un sujet.')
+    return
+  }
+  contactSubmitting.value = true
+  try {
+    await sendOrganizerInquiry(organizer.value.id, {
+      name: contactForm.value.name,
+      email: contactForm.value.email,
+      subject: contactForm.value.subject,
+      message: contactForm.value.message,
+    })
+    contactSuccess('Votre message a été envoyé à l\'organisateur.')
+    // Optionally follow the organiser too — only when logged in
+    if (contactForm.value.subscribe) {
+      if (authStore.isLoggedIn && !isFollowing.value && organizerId.value) {
+        try { await toggleFollow() } catch { /* non-blocking */ }
+      } else if (!authStore.isLoggedIn) {
+        contactInfo('Connectez-vous pour vous abonner aux notifications de cet organisateur.')
+      }
+    }
+    contactForm.value = { name: '', email: '', subject: '', message: '', subscribe: false }
+  } catch (err: any) {
+    contactError(err?.message || 'L\'envoi du message a échoué.')
+  } finally {
+    contactSubmitting.value = false
+  }
 }
 
 // SEO dynamique

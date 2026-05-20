@@ -24,6 +24,39 @@ watch(status, (val) => {
 const accessMode = computed(() => event.value?.access_mode || 'payant')
 const isInscription = computed(() => accessMode.value === 'inscription')
 const isLibre = computed(() => accessMode.value === 'libre')
+const isPrivate = computed(() => !!event.value?.is_private)
+
+// ── Invitation gate (private events) ───────────────────────────
+const inviteToken = ref('')
+const inviteVerified = ref(false)
+const inviteLoading = ref(false)
+const inviteError = ref('')
+const inviteData = ref<any>(null)
+
+async function verifyInvitation() {
+  const code = inviteToken.value.trim()
+  if (!code) {
+    inviteError.value = "Saisissez votre code d'invitation"
+    return
+  }
+  inviteLoading.value = true
+  inviteError.value = ''
+  try {
+    const config = useRuntimeConfig()
+    const res: any = await $fetch(`${config.public.apiBase}/invitations/${encodeURIComponent(code)}`)
+    inviteData.value = res?.data ?? res
+    if (inviteData.value?.event_id && event.value?.id && inviteData.value.event_id !== event.value.id) {
+      inviteError.value = "Cette invitation ne concerne pas cet événement."
+      inviteData.value = null
+      return
+    }
+    inviteVerified.value = true
+  } catch (err: any) {
+    inviteError.value = err?.data?.message || err?.message || 'Invitation invalide'
+  } finally {
+    inviteLoading.value = false
+  }
+}
 
 // ── Pixels (organizer-defined Facebook/Google tracking) ────────
 watch(event, async (ev) => {
@@ -157,9 +190,13 @@ async function goToCheckout() {
     // (no BilletEvent navbar/footer) so the buyer keeps the "dedicated event
     // page" feel through to payment. Persisted in the URL so it survives
     // refresh and back/forward navigation.
+    const query: Record<string, string> = { from: 'landing' }
+    if (isPrivate.value && inviteToken.value) {
+      query.invitation = inviteToken.value.trim()
+    }
     await navigateTo({
       path: '/checkout',
-      query: { from: 'landing' },
+      query,
       state: {
         eventId: event.value.id,
         eventSlug: event.value.slug || null,
@@ -167,6 +204,7 @@ async function goToCheckout() {
         eventDate: eventDateLong.value,
         eventLocation: eventLocation.value,
         accessMode: accessMode.value,
+        invitationToken: isPrivate.value ? inviteToken.value.trim() : null,
       },
     })
   } finally {
@@ -608,8 +646,43 @@ watchEffect(() => {
       </div>
     </section>
 
+    <!-- ─── INVITATION GATE (private events) ──────────────── -->
+    <section v-if="!isPast && isPrivate && !inviteVerified" class="bg-surface py-12 px-5 scroll-mt-24">
+      <div class="max-w-[480px] mx-auto rounded-2xl border-2 border-orange-primary bg-orange-dim/30 p-8 text-center">
+        <div class="w-14 h-14 rounded-full bg-orange-primary/15 flex items-center justify-center mx-auto mb-4">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-orange-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+        </div>
+        <h2 class="font-serif text-xl text-text-primary mb-2">Événement sur invitation</h2>
+        <p class="text-sm text-text-secondary mb-5">Saisissez le code d'invitation que vous avez reçu pour accéder à la billetterie.</p>
+        <div class="flex flex-col gap-3">
+          <input
+            v-model="inviteToken"
+            type="text"
+            inputmode="text"
+            autocapitalize="characters"
+            autocomplete="off"
+            placeholder="Code d'invitation"
+            class="px-4 py-3 rounded-xl border border-border-light bg-surface text-sm text-text-primary text-center font-mono uppercase tracking-wider outline-none focus:border-orange-primary"
+            @keydown.enter.prevent="verifyInvitation"
+          />
+          <p v-if="inviteError" class="text-xs text-red-error">{{ inviteError }}</p>
+          <button
+            type="button"
+            :disabled="inviteLoading"
+            class="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-orange-primary text-white font-bold text-sm hover:bg-orange-light transition-colors disabled:opacity-60"
+            @click="verifyInvitation"
+          >
+            {{ inviteLoading ? 'Vérification…' : 'Vérifier le code' }}
+          </button>
+        </div>
+      </div>
+    </section>
+
     <!-- ─── TICKETS ────────────────────────────────────────── -->
-    <section id="tickets" class="bg-surface py-12 px-5 scroll-mt-24" v-if="!isPast">
+    <section id="tickets" class="bg-surface py-12 px-5 scroll-mt-24" v-if="!isPast && (!isPrivate || inviteVerified)">
       <div class="max-w-[720px] mx-auto">
         <h2 class="font-serif text-[1.6rem] text-text-primary mb-2">{{ isInscription ? 'Inscription' : 'Choisissez vos billets' }}</h2>
         <p class="text-sm text-text-tertiary mb-6">{{ isInscription ? 'Inscription rapide et gratuite.' : 'Sélectionnez la quantité par catégorie de billet.' }}</p>

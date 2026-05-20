@@ -22,6 +22,30 @@ const eventType = computed(() => props.event?.event_type ?? 'presentiel')
 const toggleFavorite = () => {
   emit('toggle-favorite', props.event?.id)
 }
+
+const { toggleFollowOrganizer } = usePublicApi()
+const { success, error: notifyError } = useNotification()
+const authStore = useAuthStore()
+const isFollowing = ref(false)
+const followLoading = ref(false)
+const followOrganizer = async () => {
+  if (!organizer.value?.id) return
+  if (!authStore.isLoggedIn) {
+    notifyError('Connectez-vous pour vous abonner à un organisateur')
+    return
+  }
+  if (followLoading.value) return
+  followLoading.value = true
+  try {
+    const res = await toggleFollowOrganizer(organizer.value.id)
+    isFollowing.value = !!(res?.is_following ?? res?.data?.is_following ?? !isFollowing.value)
+    success(isFollowing.value ? 'Abonné' : 'Désabonné')
+  } catch {
+    notifyError('Impossible de mettre à jour l\'abonnement')
+  } finally {
+    followLoading.value = false
+  }
+}
 </script>
 
 <template>
@@ -67,7 +91,7 @@ const toggleFavorite = () => {
           <span class="w-6 h-6 rounded-full bg-orange-primary text-white text-xs flex items-center justify-center font-semibold shrink-0">{{ organizer.initials }}</span>
           <span class="text-sm text-text-tertiary hover:text-orange-primary transition-colors">{{ organizer.display_name || organizer.name }}</span>
         </NuxtLink>
-        <button class="text-xs text-orange-primary hover:underline cursor-pointer ml-auto" @click.stop>S'abonner</button>
+        <button :disabled="followLoading" class="text-xs text-orange-primary hover:underline cursor-pointer ml-auto disabled:opacity-60" @click.stop.prevent="followOrganizer">{{ isFollowing ? 'Abonné' : "S'abonner" }}</button>
       </div>
 
       <div v-if="salesCount > 0" class="flex items-center gap-1.5 text-xs text-text-tertiary mb-2">

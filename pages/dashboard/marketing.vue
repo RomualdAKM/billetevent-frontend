@@ -27,6 +27,7 @@ const campaignForm = ref({
   recipients: '',
   recipient_type: 'all',
   contacts: '',
+  schedule: '7d',
 })
 
 const availableTags = [
@@ -42,7 +43,7 @@ function insertTag(tag: string) {
 }
 
 function resetForm() {
-  campaignForm.value = { name: '', event_id: '', subject: '', body: '', smsMessage: '', recipients: '', recipient_type: 'all', contacts: '' }
+  campaignForm.value = { name: '', event_id: '', subject: '', body: '', smsMessage: '', recipients: '', recipient_type: 'all', contacts: '', schedule: '7d' }
 }
 
 function openNewCampaign() {
@@ -437,6 +438,17 @@ onMounted(() => {
           <label class="text-xs font-bold text-text-secondary block mb-2">Adresses email des destinataires <span class="text-orange-primary">*</span></label>
           <textarea v-model="campaignForm.contacts" rows="4" placeholder="Entrez les adresses email, séparées par des virgules ou des retours à la ligne&#10;ex: john@email.com, jane@email.com" class="w-full px-4 py-3 rounded-lg border border-border-light bg-surface text-sm text-text-primary outline-none transition-all resize-y min-h-[100px] leading-relaxed focus:border-orange-primary" />
           <p class="text-xs text-text-tertiary mt-1">Séparez les adresses par des virgules ou des retours à la ligne</p>
+        </div>
+        <div>
+          <label class="text-xs font-bold text-text-secondary block mb-2">Planification (relatif à la date de l'événement)</label>
+          <select v-model="campaignForm.schedule" class="w-full px-4 py-3 rounded-lg border border-border-light bg-surface text-sm text-text-primary outline-none transition-all cursor-pointer focus:border-orange-primary">
+            <option value="now">Envoyer dès la planification</option>
+            <option value="7d">7 jours avant l'événement</option>
+            <option value="3d">3 jours avant l'événement</option>
+            <option value="1d">1 jour avant l'événement</option>
+            <option value="0d">Le jour de l'événement</option>
+          </select>
+          <p class="text-xs text-text-tertiary mt-1">Utilisé uniquement quand vous cliquez sur "Planifier".</p>
         </div>
       </div>
       <template #footer>

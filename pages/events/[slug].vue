@@ -253,6 +253,7 @@ const ticketCategories = computed(() => {
   return passes.map((p: any) => ({
     id: p.id,
     name: p.name,
+    description: p.description || '',
     price: p.price,
     quantity: ticketQuantities.value[p.id] ?? 0,
     remaining: p.available ?? (p.capacity - p.sold_count),
@@ -748,6 +749,7 @@ watchEffect(() => {
                     {{ ticket.remaining }} restants
                   </span>
                 </div>
+                <div v-if="ticket.description" class="text-xs text-text-tertiary mb-1 line-clamp-2">{{ ticket.description }}</div>
                 <div class="font-serif text-[1.05rem] text-text-primary">{{ formatPrice(ticket.price) }}</div>
                 <div class="text-xs text-text-tertiary">{{ ticket.remaining }} restant{{ ticket.remaining > 1 ? 's' : '' }}</div>
                 <div v-if="ticket.saleStart || ticket.saleEnd" class="text-xs text-text-tertiary mt-1">

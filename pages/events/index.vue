@@ -10,8 +10,9 @@ useSeoMeta({
   ogType: 'website',
 })
 
-const { getEvents, toggleFavorite: apiFavorite } = useEventsApi()
+const { getEvents, toggleFavorite: apiFavorite, getFavorites } = useEventsApi()
 const { error: notifyError } = useNotification()
+const authStore = useAuthStore()
 
 const search = ref('')
 const activeCategory = ref('Tous')
@@ -111,6 +112,18 @@ const toggleFavorite = async (id: number | string) => {
 }
 
 const isFavorite = (id: number | string) => favorites.value.has(id)
+
+onMounted(async () => {
+  // Hydrate favorites only when authenticated — otherwise /favorites returns 401
+  if (!authStore.isLoggedIn) return
+  try {
+    const res: any = await getFavorites()
+    const items = res?.data ?? res ?? []
+    favorites.value = new Set(items.map((e: any) => e.id))
+  } catch {
+    // Silent — favorites are nice-to-have
+  }
+})
 
 const resetFilters = () => {
   search.value = ''

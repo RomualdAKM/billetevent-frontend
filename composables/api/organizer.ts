@@ -56,6 +56,9 @@ export const useOrganizerApi = () => {
   const deletePass = (eventId: number | string, passId: number | string) =>
     del(`/organizer/events/${eventId}/passes/${passId}`)
 
+  const refundOrder = (orderId: number | string, reason?: string) =>
+    post(`/organizer/orders/${orderId}/refund`, reason ? { reason } : {})
+
   const getParticipants = (params?: Record<string, unknown>) =>
     get('/organizer/participants', params)
 
@@ -291,7 +294,7 @@ export const useOrganizerApi = () => {
     getStats, getSalesByEvent, getPassMix, getRecentEvents, getRecentActivity, getSalesChart,
     getEvents, createEvent, getEvent, updateEvent, deleteEvent, publishEvent,
     getPasses, createPass, updatePass, deletePass,
-    getParticipants, getParticipant, resendTicket, sendEmailToParticipant,
+    getParticipants, getParticipant, resendTicket, sendEmailToParticipant, refundOrder,
     getKyc, submitIdentity, submitDocument, resubmitKyc,
     getBalance, getTransactions,
     getWithdrawals, requestWithdrawal,

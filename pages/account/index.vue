@@ -21,6 +21,7 @@ const birthDate = ref('')
 const city = ref('')
 const avatarFile = ref<File | null>(null)
 const avatarFileName = ref('')
+const avatarUrl = computed(() => (authStore.user as any)?.avatar || '')
 
 const initials = computed(() => {
   const f = firstName.value.charAt(0)
@@ -158,16 +159,28 @@ const updatePassword = async () => {
 }
 
 const showDeleteModal = ref(false)
+const deletePassword = ref('')
+const deletePasswordError = ref('')
 const confirmDelete = async () => {
+  if (!deletePassword.value) {
+    deletePasswordError.value = 'Saisissez votre mot de passe pour confirmer.'
+    return
+  }
+  deletePasswordError.value = ''
   deleting.value = true
   try {
-    await api.deleteAccount()
+    // Backend requires the current password as confirmation — without it,
+    // the request 422s silently. See AccountController::deleteAccount.
+    await api.deleteAccount(deletePassword.value)
     showDeleteModal.value = false
     authStore.logout()
     router.replace('/')
-  } catch {
-    showError('Erreur lors de la suppression du compte')
-    showDeleteModal.value = false
+  } catch (err: any) {
+    if (err?.status === 422 && err?.errors?.password) {
+      deletePasswordError.value = err.errors.password[0]
+    } else {
+      showError(err?.message || 'Erreur lors de la suppression du compte')
+    }
   } finally {
     deleting.value = false
   }
@@ -182,19 +195,28 @@ const confirmDelete = async () => {
     </div>
 
     <div class="flex items-center gap-5 mb-8">
-      <div class="w-24 h-24 rounded-full bg-orange-primary text-white text-2xl font-semibold flex items-center justify-center shrink-0">
+      <NuxtImg
+        v-if="avatarUrl"
+        :src="avatarUrl"
+        alt="Avatar"
+        :width="96"
+        :height="96"
+        class="w-24 h-24 rounded-full object-cover shrink-0 bg-surface-2"
+      />
+      <div v-else class="w-24 h-24 rounded-full bg-orange-primary text-white text-2xl font-semibold flex items-center justify-center shrink-0">
         {{ initials }}
       </div>
       <div>
         <input ref="fileInput" type="file" accept="image/*" class="hidden" @change="onFileSelect" />
         <button
           type="button"
-          class="px-4 py-2 rounded-lg text-sm font-medium bg-surface-2 text-text-primary hover:bg-surface-3 transition-colors"
+          :disabled="uploadingAvatar"
+          class="px-4 py-2 rounded-lg text-sm font-medium bg-surface-2 text-text-primary hover:bg-surface-3 transition-colors disabled:opacity-60"
           @click="triggerUpload"
         >
-          Changer la photo
+          {{ uploadingAvatar ? 'Envoi…' : 'Changer la photo' }}
         </button>
-        <p v-if="avatarFileName" class="text-sm text-text-tertiary mt-2">{{ avatarFileName }}</p>
+        <p v-if="avatarFileName && !uploadingAvatar" class="text-sm text-text-tertiary mt-2">{{ avatarFileName }}</p>
       </div>
     </div>
 

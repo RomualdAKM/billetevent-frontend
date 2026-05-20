@@ -13,8 +13,8 @@ export const useAccountApi = () => {
   const changePassword = (data: { current_password: string; password: string; password_confirmation: string }) =>
     put('/account/password', data)
 
-  const deleteAccount = () =>
-    del('/account/account')
+  const deleteAccount = (password: string) =>
+    del('/account/account', { password })
 
   const getTickets = (params?: Record<string, unknown>) =>
     get('/account/tickets', params)

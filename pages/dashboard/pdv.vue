@@ -19,10 +19,38 @@ const filters = [
 
 const events = ref<any[]>([])
 
-const pdvForm = ref({ name: '', address: '', hours: '', phone: '', events: [] as number[], quota: 100 })
+const pdvForm = ref({
+  name: '',
+  address: '',
+  city: '',
+  type: 'boutique',
+  hours: '',
+  phone: '',
+  instructions: '',
+  events: [] as number[],
+  quota: 100,
+})
+
+const pdvTypes = [
+  { value: 'boutique', label: 'Boutique' },
+  { value: 'kiosque', label: 'Kiosque' },
+  { value: 'mobile', label: 'Stand mobile' },
+  { value: 'partenaire', label: 'Partenaire' },
+  { value: 'autre', label: 'Autre' },
+]
 
 function resetForm() {
-  pdvForm.value = { name: '', address: '', hours: '', phone: '', events: [], quota: 100 }
+  pdvForm.value = {
+    name: '',
+    address: '',
+    city: '',
+    type: 'boutique',
+    hours: '',
+    phone: '',
+    instructions: '',
+    events: [],
+    quota: 100,
+  }
 }
 
 function openAdd() {
@@ -30,17 +58,24 @@ function openAdd() {
   showAddPdv.value = true
 }
 
+function buildPdvPayload() {
+  return {
+    name: pdvForm.value.name,
+    address: pdvForm.value.address,
+    city: pdvForm.value.city || null,
+    type: pdvForm.value.type,
+    phone: pdvForm.value.phone || null,
+    hours: pdvForm.value.hours || null,
+    instructions: pdvForm.value.instructions || null,
+    quota: pdvForm.value.quota,
+    events: pdvForm.value.events,
+  }
+}
+
 async function createPdvAction() {
   actionLoading.value = true
   try {
-    await api.createPdv({
-      name: pdvForm.value.name,
-      address: pdvForm.value.address,
-      phone: pdvForm.value.phone,
-      hours: pdvForm.value.hours,
-      quota: pdvForm.value.quota,
-      events: pdvForm.value.events,
-    })
+    await api.createPdv(buildPdvPayload())
     showAddPdv.value = false
     success('Point de vente créé avec succès')
     await loadPdvs()
@@ -52,7 +87,22 @@ async function createPdvAction() {
 }
 
 function openEdit(pdv: any) {
-  pdvForm.value = { name: pdv.name, address: pdv.address || pdv.rawAddress || '', hours: pdv.hours || '', phone: pdv.phone || '', events: pdv.events ? [...pdv.events] : [], quota: pdv.quotaTotal || 100 }
+  // `pdv.events` from the API is an array of {id, title} objects;
+  // we want the [id] array so the chip selector stays in sync.
+  const eventIds = Array.isArray(pdv.events)
+    ? pdv.events.map((e: any) => (typeof e === 'object' ? e.id : e)).filter((id: any) => id != null)
+    : []
+  pdvForm.value = {
+    name: pdv.name,
+    address: pdv.address || pdv.rawAddress || '',
+    city: pdv.city || '',
+    type: pdv.type || 'boutique',
+    hours: pdv.hours || '',
+    phone: pdv.phone || '',
+    instructions: pdv.instructions || '',
+    events: eventIds,
+    quota: pdv.quotaTotal || pdv.quota || 100,
+  }
   selectedPdv.value = pdv
   showEditPdv.value = true
 }
@@ -60,14 +110,7 @@ function openEdit(pdv: any) {
 async function saveEdit() {
   actionLoading.value = true
   try {
-    await api.updatePdv(selectedPdv.value.id, {
-      name: pdvForm.value.name,
-      address: pdvForm.value.address,
-      phone: pdvForm.value.phone,
-      hours: pdvForm.value.hours,
-      quota: pdvForm.value.quota,
-      events: pdvForm.value.events,
-    })
+    await api.updatePdv(selectedPdv.value.id, buildPdvPayload())
     showEditPdv.value = false
     success('Point de vente modifié avec succès')
     await loadPdvs()
@@ -80,14 +123,34 @@ async function saveEdit() {
 
 async function openSales(pdv: any) {
   selectedPdv.value = pdv
+  showSales.value = true
   try {
     const res = await api.getPdvStats(pdv.id)
     const data = res.data ?? res
-    selectedPdv.value = { ...pdv, ...data }
+    const sales = (data.sales || []).map((s: any) => ({
+      date: s.sold_at ? new Date(s.sold_at).toLocaleString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—',
+      event: s.event_title || '—',
+      ticket: s.pass_name || '—',
+      qty: s.quantity,
+      amount: formatNumber(Number(s.amount) || 0),
+    }))
+    const totalRevenue = Number(data.total_revenue) || 0
+    selectedPdv.value = {
+      ...pdv,
+      ...data,
+      sales,
+      tickets: data.total_quantity ?? pdv.tickets,
+      revenueNum: totalRevenue,
+      revenue: formatNumber(totalRevenue),
+    }
+    // Patch the list entry so the KPI tile updates with real revenue
+    const idx = pdvs.value.findIndex((p: any) => p.id === pdv.id)
+    if (idx !== -1) {
+      pdvs.value[idx] = { ...pdvs.value[idx], revenueNum: totalRevenue, revenue: formatNumber(totalRevenue) }
+    }
   } catch {
     useNotification().error('Impossible de charger les statistiques du point de vente')
   }
-  showSales.value = true
 }
 
 function openDeactivate(pdv: any) {
@@ -109,14 +172,23 @@ async function confirmDeactivate() {
   }
 }
 
-const kpis = ref([
-  { value: '0', label: 'Points de vente actifs', sublabel: 'Guichets physiques', iconColor: 'text-orange-primary', icon: 'home' },
-  { value: '0', label: 'Billets vendus en physique', sublabel: 'Tous PDV confondus', iconColor: 'text-blue-main', icon: 'ticket' },
-  { value: '0', label: 'FCFA en physique', sublabel: 'Chiffre d\'affaires PDV', iconColor: 'text-green-dark', icon: 'dollar' },
-  { value: '0%', label: 'Part des ventes totales', sublabel: 'Physique vs en ligne', iconColor: 'text-orange-primary', icon: 'chart' },
-])
-
 const pdvs = ref<any[]>([])
+
+const formatNumber = (n: number) => new Intl.NumberFormat('fr-FR').format(n)
+
+const kpis = computed(() => {
+  const active = pdvs.value.filter((p: any) => p.is_active !== false).length
+  const totalTickets = pdvs.value.reduce((sum: number, p: any) => sum + (p.tickets || 0), 0)
+  const totalRevenue = pdvs.value.reduce((sum: number, p: any) => sum + (p.revenueNum || 0), 0)
+  const totalQuota = pdvs.value.reduce((sum: number, p: any) => sum + (p.quotaTotal || 0), 0)
+  const sharePct = totalQuota > 0 ? Math.round((totalTickets / totalQuota) * 100) : 0
+  return [
+    { value: String(active), label: 'Points de vente actifs', sublabel: 'Guichets physiques', iconColor: 'text-orange-primary', icon: 'home' },
+    { value: formatNumber(totalTickets), label: 'Billets vendus en physique', sublabel: 'Tous PDV confondus', iconColor: 'text-blue-main', icon: 'ticket' },
+    { value: formatNumber(totalRevenue), label: 'FCFA en physique', sublabel: 'Chiffre d\'affaires PDV', iconColor: 'text-green-dark', icon: 'dollar' },
+    { value: sharePct + '%', label: 'Remplissage moyen', sublabel: 'Billets vendus / quota total', iconColor: 'text-orange-primary', icon: 'chart' },
+  ]
+})
 
 const filteredPdvs = computed(() => {
   if (activeFilter.value === 'all') return pdvs.value
@@ -136,6 +208,9 @@ async function loadPdvs() {
       return {
         ...p,
         tickets: salesCount,
+        // Revenue is loaded on-demand via getPdvStats() — list endpoint only
+        // returns counts to keep the page snappy with many PDVs.
+        revenueNum: 0,
         revenue: '—',
         quotaTotal,
         quotaPct,
@@ -244,7 +319,12 @@ onMounted(() => {
           />
         </div>
         <div class="flex flex-col gap-3 p-5">
-          <div class="text-sm text-text-secondary">{{ pdv.address }}</div>
+          <div class="text-sm text-text-secondary">
+            {{ pdv.address }}<template v-if="pdv.city">, {{ pdv.city }}</template>
+          </div>
+          <div v-if="pdv.type" class="flex items-center gap-2 -mt-1">
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-orange-dim text-orange-primary">{{ pdvTypes.find(t => t.value === pdv.type)?.label || pdv.type }}</span>
+          </div>
           <div class="flex justify-between items-center p-3 bg-surface-2/50 rounded-xl">
             <div class="text-center">
               <div class="font-serif text-xl text-text-primary">{{ pdv.tickets }}</div>
@@ -294,17 +374,35 @@ onMounted(() => {
           <label class="text-xs font-bold text-text-secondary block mb-1.5">Nom du PDV <span class="text-orange-primary">*</span></label>
           <input v-model="pdvForm.name" placeholder="Ex: Guichet principal" class="w-full px-3 py-2.5 rounded-lg border border-border-light bg-bg-primary text-sm text-text-primary outline-none transition-colors focus:border-orange-primary focus:ring-1 focus:ring-orange-primary/40" />
         </div>
+        <div class="grid grid-cols-2 gap-3 max-sm:grid-cols-1">
+          <div>
+            <label class="text-xs font-bold text-text-secondary block mb-1.5">Type</label>
+            <select v-model="pdvForm.type" class="w-full px-3 py-2.5 rounded-lg border border-border-light bg-bg-primary text-sm text-text-primary outline-none transition-colors cursor-pointer focus:border-orange-primary">
+              <option v-for="t in pdvTypes" :key="t.value" :value="t.value">{{ t.label }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs font-bold text-text-secondary block mb-1.5">Ville</label>
+            <input v-model="pdvForm.city" placeholder="Ex: Cotonou" class="w-full px-3 py-2.5 rounded-lg border border-border-light bg-bg-primary text-sm text-text-primary outline-none transition-colors focus:border-orange-primary focus:ring-1 focus:ring-orange-primary/40" />
+          </div>
+        </div>
         <div>
           <label class="text-xs font-bold text-text-secondary block mb-1.5">Adresse <span class="text-orange-primary">*</span></label>
           <input v-model="pdvForm.address" placeholder="Ex: Avenue Cheikh Anta Diop, Dakar" class="w-full px-3 py-2.5 rounded-lg border border-border-light bg-bg-primary text-sm text-text-primary outline-none transition-colors focus:border-orange-primary focus:ring-1 focus:ring-orange-primary/40" />
         </div>
-        <div>
-          <label class="text-xs font-bold text-text-secondary block mb-1.5">Horaires d'ouverture</label>
-          <input v-model="pdvForm.hours" placeholder="Ex: Lun-Sam 9h-18h" class="w-full px-3 py-2.5 rounded-lg border border-border-light bg-bg-primary text-sm text-text-primary outline-none transition-colors focus:border-orange-primary focus:ring-1 focus:ring-orange-primary/40" />
+        <div class="grid grid-cols-2 gap-3 max-sm:grid-cols-1">
+          <div>
+            <label class="text-xs font-bold text-text-secondary block mb-1.5">Horaires d'ouverture</label>
+            <input v-model="pdvForm.hours" placeholder="Ex: Lun-Sam 9h-18h" class="w-full px-3 py-2.5 rounded-lg border border-border-light bg-bg-primary text-sm text-text-primary outline-none transition-colors focus:border-orange-primary focus:ring-1 focus:ring-orange-primary/40" />
+          </div>
+          <div>
+            <label class="text-xs font-bold text-text-secondary block mb-1.5">Téléphone contact</label>
+            <input v-model="pdvForm.phone" placeholder="Ex: +221 77 000 00 00" class="w-full px-3 py-2.5 rounded-lg border border-border-light bg-bg-primary text-sm text-text-primary outline-none transition-colors focus:border-orange-primary focus:ring-1 focus:ring-orange-primary/40" />
+          </div>
         </div>
         <div>
-          <label class="text-xs font-bold text-text-secondary block mb-1.5">Téléphone contact</label>
-          <input v-model="pdvForm.phone" placeholder="Ex: +221 77 000 00 00" class="w-full px-3 py-2.5 rounded-lg border border-border-light bg-bg-primary text-sm text-text-primary outline-none transition-colors focus:border-orange-primary focus:ring-1 focus:ring-orange-primary/40" />
+          <label class="text-xs font-bold text-text-secondary block mb-1.5">Instructions / Repères</label>
+          <textarea v-model="pdvForm.instructions" rows="3" placeholder="Ex: À côté de la pharmacie centrale, demander Marie à l'accueil" class="w-full px-3 py-2.5 rounded-lg border border-border-light bg-bg-primary text-sm text-text-primary outline-none transition-colors resize-y focus:border-orange-primary focus:ring-1 focus:ring-orange-primary/40" />
         </div>
         <div>
           <label class="text-xs font-bold text-text-secondary block mb-1.5">Événements assignés</label>
@@ -312,6 +410,7 @@ onMounted(() => {
             <button
               v-for="ev in events"
               :key="ev.id"
+              type="button"
               class="px-3 py-1.5 rounded-full text-xs font-semibold border cursor-pointer transition-colors"
               :class="pdvForm.events.includes(ev.id) ? 'border-orange-primary text-orange-primary bg-orange-dim' : 'border-border-light text-text-secondary bg-surface-2 hover:border-border-medium'"
               @click="toggleEvent(ev.id)"
@@ -326,8 +425,8 @@ onMounted(() => {
       </div>
       <template #footer>
         <div class="flex items-center justify-end gap-2.5">
-          <button class="px-4 py-2.5 rounded-lg text-sm font-semibold text-text-secondary bg-surface-2 hover:bg-surface-3 transition-colors cursor-pointer border-none" @click="showAddPdv = false">Annuler</button>
-          <button class="px-4 py-2.5 rounded-lg text-sm font-semibold text-white bg-orange-primary hover:bg-orange-light transition-colors cursor-pointer border-none" @click="createPdvAction">Créer le PDV</button>
+          <button :disabled="actionLoading" class="px-4 py-2.5 rounded-lg text-sm font-semibold text-text-secondary bg-surface-2 hover:bg-surface-3 transition-colors cursor-pointer border-none disabled:opacity-60" @click="showAddPdv = false">Annuler</button>
+          <button :disabled="actionLoading" class="px-4 py-2.5 rounded-lg text-sm font-semibold text-white bg-orange-primary hover:bg-orange-light transition-colors cursor-pointer border-none disabled:opacity-60" @click="createPdvAction">{{ actionLoading ? 'Création…' : 'Créer le PDV' }}</button>
         </div>
       </template>
     </UiBaseModal>
@@ -339,17 +438,35 @@ onMounted(() => {
           <label class="text-xs font-bold text-text-secondary block mb-1.5">Nom du PDV <span class="text-orange-primary">*</span></label>
           <input v-model="pdvForm.name" class="w-full px-3 py-2.5 rounded-lg border border-border-light bg-bg-primary text-sm text-text-primary outline-none transition-colors focus:border-orange-primary focus:ring-1 focus:ring-orange-primary/40" />
         </div>
+        <div class="grid grid-cols-2 gap-3 max-sm:grid-cols-1">
+          <div>
+            <label class="text-xs font-bold text-text-secondary block mb-1.5">Type</label>
+            <select v-model="pdvForm.type" class="w-full px-3 py-2.5 rounded-lg border border-border-light bg-bg-primary text-sm text-text-primary outline-none transition-colors cursor-pointer focus:border-orange-primary">
+              <option v-for="t in pdvTypes" :key="t.value" :value="t.value">{{ t.label }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs font-bold text-text-secondary block mb-1.5">Ville</label>
+            <input v-model="pdvForm.city" class="w-full px-3 py-2.5 rounded-lg border border-border-light bg-bg-primary text-sm text-text-primary outline-none transition-colors focus:border-orange-primary focus:ring-1 focus:ring-orange-primary/40" />
+          </div>
+        </div>
         <div>
           <label class="text-xs font-bold text-text-secondary block mb-1.5">Adresse</label>
           <input v-model="pdvForm.address" class="w-full px-3 py-2.5 rounded-lg border border-border-light bg-bg-primary text-sm text-text-primary outline-none transition-colors focus:border-orange-primary focus:ring-1 focus:ring-orange-primary/40" />
         </div>
-        <div>
-          <label class="text-xs font-bold text-text-secondary block mb-1.5">Horaires d'ouverture</label>
-          <input v-model="pdvForm.hours" class="w-full px-3 py-2.5 rounded-lg border border-border-light bg-bg-primary text-sm text-text-primary outline-none transition-colors focus:border-orange-primary focus:ring-1 focus:ring-orange-primary/40" />
+        <div class="grid grid-cols-2 gap-3 max-sm:grid-cols-1">
+          <div>
+            <label class="text-xs font-bold text-text-secondary block mb-1.5">Horaires d'ouverture</label>
+            <input v-model="pdvForm.hours" class="w-full px-3 py-2.5 rounded-lg border border-border-light bg-bg-primary text-sm text-text-primary outline-none transition-colors focus:border-orange-primary focus:ring-1 focus:ring-orange-primary/40" />
+          </div>
+          <div>
+            <label class="text-xs font-bold text-text-secondary block mb-1.5">Téléphone contact</label>
+            <input v-model="pdvForm.phone" class="w-full px-3 py-2.5 rounded-lg border border-border-light bg-bg-primary text-sm text-text-primary outline-none transition-colors focus:border-orange-primary focus:ring-1 focus:ring-orange-primary/40" />
+          </div>
         </div>
         <div>
-          <label class="text-xs font-bold text-text-secondary block mb-1.5">Téléphone contact</label>
-          <input v-model="pdvForm.phone" class="w-full px-3 py-2.5 rounded-lg border border-border-light bg-bg-primary text-sm text-text-primary outline-none transition-colors focus:border-orange-primary focus:ring-1 focus:ring-orange-primary/40" />
+          <label class="text-xs font-bold text-text-secondary block mb-1.5">Instructions / Repères</label>
+          <textarea v-model="pdvForm.instructions" rows="3" class="w-full px-3 py-2.5 rounded-lg border border-border-light bg-bg-primary text-sm text-text-primary outline-none transition-colors resize-y focus:border-orange-primary focus:ring-1 focus:ring-orange-primary/40" />
         </div>
         <div>
           <label class="text-xs font-bold text-text-secondary block mb-1.5">Événements assignés</label>
@@ -357,6 +474,7 @@ onMounted(() => {
             <button
               v-for="ev in events"
               :key="ev.id"
+              type="button"
               class="px-3 py-1.5 rounded-full text-xs font-semibold border cursor-pointer transition-colors"
               :class="pdvForm.events.includes(ev.id) ? 'border-orange-primary text-orange-primary bg-orange-dim' : 'border-border-light text-text-secondary bg-surface-2 hover:border-border-medium'"
               @click="toggleEvent(ev.id)"
@@ -371,8 +489,8 @@ onMounted(() => {
       </div>
       <template #footer>
         <div class="flex items-center justify-end gap-2.5">
-          <button class="px-4 py-2.5 rounded-lg text-sm font-semibold text-text-secondary bg-surface-2 hover:bg-surface-3 transition-colors cursor-pointer border-none" @click="showEditPdv = false">Annuler</button>
-          <button class="px-4 py-2.5 rounded-lg text-sm font-semibold text-white bg-orange-primary hover:bg-orange-light transition-colors cursor-pointer border-none" @click="saveEdit">Enregistrer</button>
+          <button :disabled="actionLoading" class="px-4 py-2.5 rounded-lg text-sm font-semibold text-text-secondary bg-surface-2 hover:bg-surface-3 transition-colors cursor-pointer border-none disabled:opacity-60" @click="showEditPdv = false">Annuler</button>
+          <button :disabled="actionLoading" class="px-4 py-2.5 rounded-lg text-sm font-semibold text-white bg-orange-primary hover:bg-orange-light transition-colors cursor-pointer border-none disabled:opacity-60" @click="saveEdit">{{ actionLoading ? 'Enregistrement…' : 'Enregistrer' }}</button>
         </div>
       </template>
     </UiBaseModal>
@@ -394,12 +512,16 @@ onMounted(() => {
             <div class="text-xs text-text-tertiary">Du quota</div>
           </div>
         </div>
-        <div class="border border-border-light rounded-xl overflow-hidden">
+        <div v-if="(selectedPdv.sales || []).length === 0" class="bg-surface-2/40 border border-border-light rounded-xl p-8 text-center text-sm text-text-tertiary">
+          Aucune vente enregistrée pour ce point de vente.
+        </div>
+        <div v-else class="border border-border-light rounded-xl overflow-hidden">
           <table class="w-full text-sm">
             <thead>
               <tr class="bg-surface-2/50 border-b border-border-light">
                 <th class="text-left px-4 py-3 text-[11px] font-bold text-text-tertiary uppercase tracking-wider">Date</th>
-                <th class="text-left px-4 py-3 text-[11px] font-bold text-text-tertiary uppercase tracking-wider">Billet</th>
+                <th class="text-left px-4 py-3 text-[11px] font-bold text-text-tertiary uppercase tracking-wider">Événement</th>
+                <th class="text-left px-4 py-3 text-[11px] font-bold text-text-tertiary uppercase tracking-wider">Pass</th>
                 <th class="text-center px-4 py-3 text-[11px] font-bold text-text-tertiary uppercase tracking-wider">Qté</th>
                 <th class="text-right px-4 py-3 text-[11px] font-bold text-text-tertiary uppercase tracking-wider">Montant</th>
               </tr>
@@ -407,6 +529,7 @@ onMounted(() => {
             <tbody>
               <tr v-for="(sale, si) in selectedPdv.sales" :key="si" class="border-b border-border-light/60 last:border-0">
                 <td class="px-4 py-4 text-text-secondary">{{ sale.date }}</td>
+                <td class="px-4 py-4 text-text-primary">{{ sale.event }}</td>
                 <td class="px-4 py-4 text-text-primary font-medium">{{ sale.ticket }}</td>
                 <td class="px-4 py-4 text-center text-text-primary">{{ sale.qty }}</td>
                 <td class="px-4 py-4 text-right font-semibold text-text-primary">{{ sale.amount }} FCFA</td>

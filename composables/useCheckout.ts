@@ -82,6 +82,7 @@ export const useCheckout = () => {
 
   // ── Wizall OTP ──
   const wizallOrderId = ref<number | string | null>(null)
+  const wizallOrderReference = ref<string | null>(null)
   const wizallCode = ref('')
   const wizallLoading = ref(false)
 
@@ -304,6 +305,9 @@ export const useCheckout = () => {
     if (payment.requires_confirmation || selectedOperator.value === 'Wizall') {
       paymentState.value = 'awaiting_confirmation'
       wizallOrderId.value = data.order_id ?? null
+      // Stash the reference too — that's what /orders/[id] expects in the URL
+      // for the post-confirm navigation (works for both auth and guest paths).
+      wizallOrderReference.value = data.reference ?? null
       // Hold the cart until Wizall confirmation succeeds (cleared in confirmWizallCode)
       return
     }
@@ -411,9 +415,11 @@ export const useCheckout = () => {
       paymentState.value = 'success'
       notifySuccess('Paiement Wizall confirmé !')
       cartStore.clearCart()
-      navigateTo(`/orders/${wizallOrderId.value}`)
-      // Note: Wizall confirms an existing order — at that point the buyer is
-      // expected to have authenticated previously, so no signed URL is needed.
+      // Prefer the human-readable reference (which is what /orders/[id]/index
+      // expects). Falls back to numeric id thanks to the OrderController fix
+      // that now accepts both lookup keys.
+      const target = wizallOrderReference.value || wizallOrderId.value
+      navigateTo(`/orders/${target}`)
     } catch (err: any) {
       notifyError(err?.data?.message || 'Code Wizall invalide')
     } finally {

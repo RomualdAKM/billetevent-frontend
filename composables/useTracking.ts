@@ -207,7 +207,9 @@ export const useTracking = () => {
       if (cache.value[organizerId]) {
         activePixels = cache.value[organizerId]
       } else {
-        const res: any = await api.get(`/api/pixels/${organizerId}`)
+        // apiBase already includes the /api prefix — passing /api/pixels/X
+        // produces /api/api/pixels/X (404). Strip the duplicate.
+        const res: any = await api.get(`/pixels/${organizerId}`)
         const pixels: PixelData[] = res?.data ?? res ?? []
         cache.value[organizerId] = pixels
         activePixels = pixels

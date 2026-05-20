@@ -154,6 +154,7 @@ onUnmounted(() => {
       <div class="text-center mt-4 text-[0.8rem] text-text-tertiary">
         Vous n'avez pas reçu le code ?
         <button
+          type="button"
           class="text-orange-primary font-semibold bg-transparent border-none cursor-pointer font-sans disabled:opacity-50 disabled:cursor-not-allowed"
           :disabled="resendCooldown > 0"
           @click="handleResendOtp"

@@ -186,7 +186,8 @@ const loading = ref(true)
 const actionLoading = ref(false)
 const eventName = ref('')
 const accessCode = ref('')
-const validationLink = computed(() => `https://billetevent.com/validator/login/EVT-${eventId}`)
+const accessLink = ref('')
+const validationLink = computed(() => accessLink.value || `${window.location.origin}/validator/login/EVT-${eventId}`)
 const regenModalOpen = ref(false)
 
 const scanStats = ref({ scanned: 0, valid: 0, invalid: 0, duplicates: 0 })
@@ -233,6 +234,7 @@ const loadValidatorData = async () => {
     const data = res?.data ?? res
     eventName.value = data?.event_name || data?.event?.title || ''
     accessCode.value = data?.access_code || data?.code || ''
+    accessLink.value = data?.access_link || ''
     scanStats.value = {
       scanned: data?.stats?.scanned ?? data?.scanned ?? 0,
       valid: data?.stats?.valid ?? data?.valid ?? 0,
@@ -241,9 +243,9 @@ const loadValidatorData = async () => {
     }
     recentScans.value = (data?.recent_scans || data?.scans || []).map((s: any) => ({
       time: s.time || s.scanned_at || '',
-      ticket: s.ticket_number || s.ticket || '',
-      type: s.pass_type || s.type || '',
-      status: s.status || 'valid',
+      ticket: s.ticket_reference || s.ticket_number || s.ticket || '',
+      type: s.pass_name || s.pass_type || s.type || '',
+      status: (s.result === 'already_used' ? 'duplicate' : s.result) || s.status || 'valid',
     }))
   } catch {
     notifyError('Impossible de charger les données validateur')
