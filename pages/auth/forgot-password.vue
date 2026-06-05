@@ -66,7 +66,7 @@ const handleForgotPassword = async () => {
           <label class="block text-[0.78rem] font-semibold text-text-secondary mb-1.5 tracking-[0.01em]">
             Adresse email <span class="text-orange-primary ml-0.5">*</span>
           </label>
-          <input v-model="email" type="email" autocomplete="email" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" autofocus placeholder="you@example.com" class="w-full px-3.5 py-2.5 border-[1.5px] rounded-lg font-sans text-[0.87rem] text-text-primary bg-surface outline-none placeholder:text-text-tertiary focus:border-orange-primary transition-colors" :class="emailError ? 'border-red-error' : 'border-border-light'" @input="emailError = ''" />
+          <input v-model="email" type="email" autocomplete="email" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" autofocus placeholder="vous@exemple.com" class="w-full px-3.5 py-2.5 border-[1.5px] rounded-lg font-sans text-[0.87rem] text-text-primary bg-surface outline-none placeholder:text-text-tertiary focus:border-orange-primary transition-colors" :class="emailError ? 'border-red-error' : 'border-border-light'" @input="emailError = ''" />
           <p v-if="emailError" class="text-[0.75rem] text-red-error mt-1">{{ emailError }}</p>
         </div>
         <button

@@ -20,14 +20,25 @@ const colorMap: Record<Notification['type'], { bg: string; icon: string; bar: st
 
 <template>
   <Teleport to="body">
-    <div role="status" aria-live="polite" aria-atomic="false" class="fixed top-4 right-4 z-[100] flex flex-col gap-3 w-full max-w-sm pointer-events-none">
+    <!-- Desktop: top-right. Mobile: bottom + safe-area (loin du notch +
+         là où les yeux/pouces vont après une action). Animation aussi
+         différenciée selon le viewport. -->
+    <div
+      role="status"
+      aria-live="polite"
+      aria-atomic="false"
+      class="fixed z-[100] flex flex-col gap-3 pointer-events-none
+             top-4 right-4 w-full max-w-sm
+             max-sm:top-auto max-sm:right-2 max-sm:left-2 max-sm:max-w-none
+             max-sm:bottom-[calc(env(safe-area-inset-bottom)+1rem)]"
+    >
       <TransitionGroup
         enter-active-class="transition-all duration-300 ease-out"
         leave-active-class="transition-all duration-200 ease-in"
-        enter-from-class="translate-x-full opacity-0"
-        enter-to-class="translate-x-0 opacity-100"
-        leave-from-class="translate-x-0 opacity-100"
-        leave-to-class="translate-x-full opacity-0"
+        enter-from-class="translate-x-full opacity-0 max-sm:translate-x-0 max-sm:translate-y-full"
+        enter-to-class="translate-x-0 opacity-100 max-sm:translate-y-0"
+        leave-from-class="translate-x-0 opacity-100 max-sm:translate-y-0"
+        leave-to-class="translate-x-full opacity-0 max-sm:translate-x-0 max-sm:translate-y-full"
       >
         <div
           v-for="n in notifications"

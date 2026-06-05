@@ -37,12 +37,18 @@
             <label class="block text-sm font-medium text-text-primary mb-1.5">Code d'accès</label>
             <input
               v-model="code"
+              name="access_code"
               type="text"
               required
-              placeholder="Entrez le code d'accès"
-              class="w-full border border-border-light rounded-xl px-4 py-3 text-sm font-sans bg-white text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-orange-primary focus:ring-2 focus:ring-orange-primary/20 transition-all"
+              autocomplete="one-time-code"
+              autocapitalize="characters"
+              autocorrect="off"
+              spellcheck="false"
+              placeholder="Code reçu sur WhatsApp"
+              class="w-full border border-border-light rounded-xl px-4 py-3 text-base font-mono font-semibold tracking-wider bg-white text-text-primary placeholder:text-text-tertiary placeholder:font-sans placeholder:tracking-normal placeholder:font-normal focus:outline-none focus:border-orange-primary focus:ring-2 focus:ring-orange-primary/20 transition-all"
               :class="codeError ? 'border-red-error' : ''"
             />
+            <p class="text-text-tertiary text-xs mt-1.5">Vous pouvez aussi coller le lien complet — le code sera extrait automatiquement.</p>
             <p v-if="codeError" class="text-red-error text-xs mt-1.5">{{ codeError }}</p>
           </div>
 
@@ -84,6 +90,31 @@ const { error: notifyError } = useNotification()
 const code = ref('')
 const codeError = ref('')
 const loading = ref(false)
+
+// Si l'utilisateur arrive depuis un lien WhatsApp qui contient déjà le code
+// dans l'URL (path param `[code]`), pré-remplir le champ. Le validateur n'a
+// plus qu'à cliquer "Se connecter". Réduit la friction de saisie sur smartphone.
+onMounted(() => {
+  const fromUrl = route.params.code as string
+  if (fromUrl && fromUrl !== 'enter' && fromUrl.length > 4) {
+    code.value = fromUrl
+  }
+  // Autofocus du champ après mount (les attrs HTML ne suffisent pas avec Nuxt SSR)
+  nextTick(() => {
+    const input = document.querySelector<HTMLInputElement>('input[name="access_code"]')
+    input?.focus()
+  })
+})
+
+// Si l'utilisateur colle une URL complète (ex : https://billetevent.com/validator/scan/ABC123),
+// on extrait le code automatiquement.
+watch(code, (val) => {
+  if (typeof val !== 'string') return
+  const m = val.match(/\/validator\/(?:login|scan)\/([A-Za-z0-9_-]+)/)
+  if (m && m[1]) {
+    code.value = m[1]
+  }
+})
 
 const handleLogin = async () => {
   codeError.value = ''

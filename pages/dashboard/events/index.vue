@@ -1,13 +1,23 @@
 <template>
   <div class="flex flex-col gap-6">
     <UiPageHeader title="Mes événements" subtitle="Gérez et suivez tous vos événements">
-      <NuxtLink
-        to="/dashboard/events/create"
-        class="bg-orange-primary text-white border-none rounded-lg px-5 py-2.5 text-sm font-bold cursor-pointer font-sans whitespace-nowrap transition-all duration-150 hover:bg-orange-light flex items-center gap-2 no-underline"
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Nouvel événement
-      </NuxtLink>
+      <div class="flex items-center gap-2">
+        <NuxtLink
+          to="/dashboard/events/quick"
+          class="bg-orange-primary text-white border-none rounded-lg px-5 py-2.5 text-sm font-bold cursor-pointer font-sans whitespace-nowrap transition-all duration-150 hover:bg-orange-light flex items-center gap-2 no-underline"
+          title="Créer un brouillon en 2 minutes"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          Création rapide
+        </NuxtLink>
+        <NuxtLink
+          to="/dashboard/events/create"
+          class="border border-border-light text-text-primary rounded-lg px-4 py-2.5 text-sm font-semibold cursor-pointer font-sans whitespace-nowrap transition-all duration-150 hover:border-orange-primary hover:text-orange-primary flex items-center gap-2 no-underline"
+          title="Wizard complet avec toutes les options"
+        >
+          Wizard complet
+        </NuxtLink>
+      </div>
     </UiPageHeader>
 
     <!-- Barre de filtres : recherche + dropdown statut -->
@@ -139,8 +149,8 @@
             <button
               v-if="!evt.isDraft"
               class="p-2.5 border border-border-light rounded-lg bg-surface text-text-secondary cursor-pointer font-sans transition-all duration-150 flex items-center justify-center hover:bg-surface-2 hover:text-text-primary hover:border-border-medium"
-              title="Validateur"
-              @click="navigateTo('/dashboard/events/' + evt.id + '/validators')"
+              title="Tableau de bord de l'événement"
+              @click="navigateTo('/dashboard/events/' + evt.id)"
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
             </button>

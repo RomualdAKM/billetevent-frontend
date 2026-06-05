@@ -5,7 +5,10 @@ import type {
   FormErrors,
 } from '~/types/payment'
 
-const PAYMENT_TIMEOUT_MS = 30_000
+// 90s : Orange Money / Wave / Free Money peuvent prendre 60-90s en heures
+// de pointe (push USSD + validation utilisateur). 30s = perte de commandes
+// valides.
+const PAYMENT_TIMEOUT_MS = 90_000
 
 export const useCheckout = () => {
   const { success: notifySuccess, error: notifyError } = useNotification()
@@ -89,6 +92,11 @@ export const useCheckout = () => {
   // ── Pending message ──
   const pendingMessage = ref('')
 
+  // ── Invitation token (private events) ──
+  // Survives /checkout reloads via the URL query (state alone would be lost
+  // on F5). Validated server-side in CheckoutController.
+  const invitationToken = ref<string>('')
+
   // ── Computed: pricing ──
   const items = computed(() => cartStore.items)
   const subtotal = computed(() => cartStore.subtotal)
@@ -140,6 +148,18 @@ export const useCheckout = () => {
     if (s?.guestEmail) registrationData.value.guest_email = s.guestEmail
     if (s?.guestPhone) registrationData.value.guest_phone = s.guestPhone
     if (s?.guestCompany) registrationData.value.guest_company = s.guestCompany
+
+    // Restore invitation token (private events). Priority: state (immediate
+    // from navigation) → URL query (survives hard refresh F5).
+    if (s?.invitationToken) {
+      invitationToken.value = String(s.invitationToken)
+    } else {
+      try {
+        const url = new URL(window.location.href)
+        const q = url.searchParams.get('invitation')
+        if (q) invitationToken.value = q
+      } catch { /* no-op */ }
+    }
 
     if (!eventId.value && cartStore.eventId) {
       eventId.value = cartStore.eventId
@@ -253,6 +273,11 @@ export const useCheckout = () => {
 
     if (cartStore.promoCode) {
       payload.promo_code = cartStore.promoCode
+    }
+
+    // Private-event invitation token (validated server-side).
+    if (invitationToken.value) {
+      (payload as any).invitation_token = invitationToken.value
     }
 
     // Signal to backend that the buyer is in the marketing landing flow

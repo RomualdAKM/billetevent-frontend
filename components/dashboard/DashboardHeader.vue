@@ -6,6 +6,8 @@
     <!-- Left: menu mobile + titre -->
     <div class="flex items-center gap-3 min-w-0 flex-1">
       <button
+        type="button"
+        aria-label="Ouvrir le menu"
         class="flex lg:hidden w-10 h-10 rounded-xl bg-surface-2 border border-border-light items-center justify-center cursor-pointer transition-all duration-150 hover:bg-surface-3 hover:border-border-medium active:scale-95"
         @click="$emit('toggleSidebar')"
         title="Menu"
@@ -28,6 +30,9 @@
       <!-- Notifications -->
       <div class="relative" ref="notifRef">
         <button
+          type="button"
+          :aria-label="unreadCount > 0 ? `Notifications (${unreadCount} non lues)` : 'Notifications'"
+          :aria-expanded="notifOpen"
           class="w-10 h-10 rounded-xl bg-surface-2 border border-border-light flex items-center justify-center cursor-pointer relative transition-all duration-150 hover:border-border-medium hover:bg-surface-3"
           @click="notifOpen = !notifOpen"
         >

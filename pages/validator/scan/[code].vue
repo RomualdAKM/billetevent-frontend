@@ -25,6 +25,21 @@
         </span>
       </div>
       <div class="flex items-center gap-2">
+        <!-- Toggle son : critique en festival/concert bruyant -->
+        <button
+          type="button"
+          :aria-label="soundEnabled ? 'Couper le son' : 'Activer le son'"
+          :title="soundEnabled ? 'Son activé — cliquer pour couper' : 'Son coupé — cliquer pour activer'"
+          class="w-10 h-10 rounded-lg border border-border-light flex items-center justify-center cursor-pointer transition-colors hover:bg-surface-2"
+          @click="soundEnabled = !soundEnabled"
+        >
+          <svg v-if="soundEnabled" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-green-dark">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+          </svg>
+          <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-text-tertiary">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>
+          </svg>
+        </button>
         <button
           class="border border-border-light rounded-lg px-4 py-2 text-sm font-sans cursor-pointer transition-all duration-150 hover:bg-surface-2 flex items-center gap-2 text-text-primary"
           @click="mode = mode === 'scan' ? 'manual' : 'scan'"
@@ -33,9 +48,10 @@
           <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
           {{ mode === 'scan' ? 'Validation manuelle' : 'Scanner QR' }}
         </button>
+        <!-- Logout avec confirmation (anti-tap accidentel en plein rush) -->
         <button
           class="text-red-error border border-red-error rounded-lg px-4 py-2 text-sm font-sans cursor-pointer transition-all duration-150 hover:bg-red-dim"
-          @click="handleValidatorLogout"
+          @click="showLogoutConfirm = true"
         >Déconnexion</button>
       </div>
     </header>
@@ -102,15 +118,38 @@
 
         <div v-if="!manualResult" class="bg-surface rounded-xl p-6 max-w-[500px] mx-auto">
           <form @submit.prevent="handleManualSearch" class="space-y-4">
-            <div>
-              <label class="block text-sm font-medium text-text-primary mb-1.5">Numéro de ticket</label>
+            <div class="relative">
+              <label class="block text-sm font-medium text-text-primary mb-1.5">Numéro de ticket ou nom du porteur</label>
               <input
                 v-model="manualForm.ticket"
                 type="text"
-                placeholder="Ex: BEV-2026-VIP-5745"
+                autocomplete="off"
+                placeholder="Ex : BEV-2026-VIP-5745  ou  Awa Diop"
                 class="w-full border border-border-light rounded-lg px-4 py-3 text-sm font-sans bg-white text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-orange-primary focus:ring-2 focus:ring-orange-primary/20 transition-all"
+                @input="onManualSearchInput"
               />
+              <!-- Suggestions live (recherche par nom via api.search()) -->
+              <div
+                v-if="searchSuggestions.length > 0"
+                class="absolute top-full left-0 right-0 mt-1 bg-white border border-border-light rounded-lg shadow-lg z-10 max-h-72 overflow-y-auto"
+              >
+                <button
+                  v-for="(sug, i) in searchSuggestions"
+                  :key="i"
+                  type="button"
+                  class="w-full text-left px-4 py-3 hover:bg-surface-2 transition-colors border-b border-border-light last:border-b-0"
+                  @click="pickSuggestion(sug)"
+                >
+                  <div class="text-sm font-semibold text-text-primary">{{ sug.attendee_name || sug.buyer_name || sug.reference }}</div>
+                  <div class="text-xs text-text-tertiary mt-0.5">
+                    {{ sug.reference }}
+                    <span v-if="sug.pass_type || sug.ticket_type"> · {{ sug.pass_type || sug.ticket_type }}</span>
+                    <span v-if="sug.status === 'used'" class="ml-2 text-gold font-semibold">déjà scanné</span>
+                  </div>
+                </button>
+              </div>
             </div>
+            <p class="text-xs text-text-tertiary">Tapez au moins 2 caractères pour la recherche par nom.</p>
             <button
               type="submit"
               :disabled="searching"
@@ -118,7 +157,7 @@
             >
               <svg v-if="searching" class="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
               <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              {{ searching ? 'Recherche...' : 'Rechercher' }}
+              {{ searching ? 'Recherche...' : 'Valider' }}
             </button>
           </form>
         </div>
@@ -163,6 +202,18 @@
         </span>
       </div>
     </div>
+
+    <!-- Confirmation logout — anti-tap accidentel en plein rush -->
+    <UiConfirmModal
+      :is-open="showLogoutConfirm"
+      title="Se déconnecter ?"
+      message="Vous devrez re-saisir le code d'accès pour revenir à cet écran de scan. Continuer ?"
+      confirm-text="Oui, déconnecter"
+      cancel-text="Annuler"
+      variant="warning"
+      @confirm="handleValidatorLogout"
+      @cancel="showLogoutConfirm = false"
+    />
   </div>
 </template>
 
@@ -175,6 +226,9 @@ const { error: notifyError, success: notifySuccess, info: notifyInfo } = useNoti
 const offline = useOfflineScanQueue()
 
 const mode = ref<'scan' | 'manual'>('scan')
+// Confirmation de déconnexion : évite un tap accidentel en plein rush qui
+// obligerait à re-taper le code d'accès au milieu d'une file de 200 personnes.
+const showLogoutConfirm = ref(false)
 const cameraActive = ref(true)
 const settingsOpen = ref(false)
 const scanResult = ref<string | null>(null)
@@ -199,6 +253,43 @@ const ticketTypes = ref([
 const manualForm = ref({
   ticket: '',
 })
+
+// Autocomplete suggestions live (recherche par nom du porteur)
+// Si l'utilisateur tape ≥2 caractères ET que ça ne ressemble pas à une
+// référence ticket (qui commence par "BEV-..."), on lance api.search().
+const searchSuggestions = ref<any[]>([])
+let suggestionsTimeout: ReturnType<typeof setTimeout> | null = null
+
+async function onManualSearchInput() {
+  const query = manualForm.value.ticket.trim()
+  if (suggestionsTimeout) clearTimeout(suggestionsTimeout)
+  // Pas de suggestions si vide, trop court, ou ressemble à une référence
+  if (query.length < 2 || /^[A-Z]{3,4}-/i.test(query)) {
+    searchSuggestions.value = []
+    return
+  }
+  if (!offline.isOnline.value) {
+    searchSuggestions.value = []
+    return
+  }
+  // Debounce 300ms pour éviter de bombarder le backend à chaque frappe
+  suggestionsTimeout = setTimeout(async () => {
+    try {
+      const res: any = await api.search({ query })
+      const data = res?.data ?? res
+      searchSuggestions.value = Array.isArray(data) ? data.slice(0, 6) : []
+    } catch {
+      searchSuggestions.value = []
+    }
+  }, 300)
+}
+
+function pickSuggestion(sug: any) {
+  manualForm.value.ticket = sug.reference || ''
+  searchSuggestions.value = []
+  // Auto-submit pour fluidifier le rush
+  handleManualSearch()
+}
 
 const getResultConfig = (result: string | null) => {
   const configs: Record<string, any> = {
@@ -242,6 +333,64 @@ const buzz = (pattern: number | number[]) => {
     try { navigator.vibrate(pattern) } catch { /* unsupported */ }
   }
 }
+
+// ─── Audio feedback ──────────────────────────────────────────
+// Web Audio API : on génère 3 beeps distincts (valid/used/invalid) sans
+// fichiers externes. Critique en festival/concert où le bruit ambiant
+// rend la vibration invisible.
+// Volume contrôlable + mute persistant en localStorage.
+const SOUND_PREFS_KEY = 'validator_sound_enabled_v1'
+const soundEnabled = ref<boolean>(true)
+if (import.meta.client) {
+  try {
+    const stored = localStorage.getItem(SOUND_PREFS_KEY)
+    if (stored !== null) soundEnabled.value = stored === '1'
+  } catch { /* silencieux */ }
+}
+watch(soundEnabled, (val) => {
+  if (import.meta.client) {
+    try { localStorage.setItem(SOUND_PREFS_KEY, val ? '1' : '0') } catch { /* silencieux */ }
+  }
+})
+
+let audioCtx: AudioContext | null = null
+function getAudioCtx(): AudioContext | null {
+  if (typeof window === 'undefined') return null
+  if (!audioCtx) {
+    try {
+      // @ts-expect-error webkit prefix legacy
+      const Ctor = window.AudioContext || window.webkitAudioContext
+      if (!Ctor) return null
+      audioCtx = new Ctor()
+    } catch { return null }
+  }
+  return audioCtx
+}
+
+function playBeep(frequency: number, durationMs: number, gain: number = 0.18) {
+  if (!soundEnabled.value) return
+  const ctx = getAudioCtx()
+  if (!ctx) return
+  try {
+    const osc = ctx.createOscillator()
+    const g = ctx.createGain()
+    osc.type = 'sine'
+    osc.frequency.value = frequency
+    g.gain.value = 0
+    osc.connect(g)
+    g.connect(ctx.destination)
+    const now = ctx.currentTime
+    // Enveloppe ADSR courte pour éviter le pop
+    g.gain.linearRampToValueAtTime(gain, now + 0.005)
+    g.gain.linearRampToValueAtTime(0, now + durationMs / 1000)
+    osc.start(now)
+    osc.stop(now + durationMs / 1000 + 0.02)
+  } catch { /* silencieux */ }
+}
+
+function playValidSound() { playBeep(880, 180) } // do aigu — succès clair
+function playUsedSound() { playBeep(440, 120); setTimeout(() => playBeep(330, 120), 130) } // warning 2 tons
+function playInvalidSound() { playBeep(220, 280, 0.22) } // grave — erreur
 
 /** Sends a queued scan to the API; called by the offline queue when network returns. */
 const sendQueuedScan = async (item: { type: 'qr' | 'manual'; payload: { qr_data?: string; ticket_reference?: string } }) => {
@@ -303,9 +452,9 @@ const handleCameraScan = async (data: string) => {
     }
     scanResult.value = mapScanStatus(response)
     // Haptic feedback: short for valid, long+long for duplicate, short+pause+short for invalid
-    if (scanResult.value === 'valid') buzz(80)
-    else if (scanResult.value === 'used') buzz([200, 100, 200])
-    else buzz([80, 80, 80])
+    if (scanResult.value === 'valid') { buzz(80); playValidSound() }
+    else if (scanResult.value === 'used') { buzz([200, 100, 200]); playUsedSound() }
+    else { buzz([80, 80, 80]); playInvalidSound() }
     await loadStats()
     resetAfter()
   } catch (err: any) {
@@ -315,10 +464,12 @@ const handleCameraScan = async (data: string) => {
       scanResult.value = 'pending_sync'
       lastScanData.value = { offline: true } as any
       buzz([120, 60, 120])
+      playUsedSound()
       notifyInfo('Réseau indisponible — scan à vérifier après synchronisation')
     } else {
       scanResult.value = 'invalid'
       buzz([80, 80, 80])
+      playInvalidSound()
       notifyError(err?.message || err?.data?.message || 'Erreur lors du scan')
     }
     resetAfter()

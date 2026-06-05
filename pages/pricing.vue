@@ -35,10 +35,9 @@ const advantages = [
   { title: 'Support humain', desc: 'Notre équipe est disponible pour vous accompagner à chaque étape.', icon: 'support' },
 ]
 
-const partners = [
-  'AfriEvents', 'KolaBiz', 'Sunu Festival', 'DakarNights',
-  'AbidjanLive', 'Festival Maquis', 'Bamako Expo', 'CotoFest',
-]
+// Partners list is intentionally empty — NEVER add fictional partner names.
+// Section is hidden via v-if="partners.length" until real partners exist.
+const partners: string[] = []
 </script>
 
 <template>
@@ -133,7 +132,7 @@ const partners = [
       </div>
     </section>
 
-    <section>
+    <section v-if="partners.length > 0">
       <div class="px-5 md:px-10 py-20 max-w-[1200px] mx-auto">
         <div class="text-center mb-14">
           <div class="text-xs font-bold tracking-widest uppercase text-orange-primary mb-2.5">Références</div>

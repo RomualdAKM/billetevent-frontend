@@ -78,7 +78,7 @@ const handleLogin = async () => {
           autocorrect="off"
           spellcheck="false"
           autofocus
-          placeholder="you@example.com"
+          placeholder="vous@exemple.com"
           class="w-full px-3.5 py-2.5 border-[1.5px] rounded-lg font-sans text-[0.87rem] text-text-primary bg-surface outline-none placeholder:text-text-tertiary focus:border-orange-primary transition-colors"
           :class="errors.email ? 'border-red-error' : 'border-border-light'"
           @input="errors.email = ''"

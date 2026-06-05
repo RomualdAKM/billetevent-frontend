@@ -67,7 +67,9 @@ const startPolling = () => {
       }
     } catch { /* silently ignore polling errors */ }
   }, 5000)
-  pollTimeout = setTimeout(() => stopPolling(), 120000)
+  // 5 min : un paiement mobile money valide après 2 min restait coincé en
+  // "En attente" jusqu'au refresh manuel — perte de commandes.
+  pollTimeout = setTimeout(() => stopPolling(), 300000)
 }
 
 const loadOrder = async () => {
@@ -84,10 +86,15 @@ const loadOrder = async () => {
     order.value = res?.data ?? res
     if (order.value?.status === 'pending') startPolling()
     maybeTrackPurchase()
-    // Order is now persisted server-side — safe to clear the local cart so
-    // it doesn't reappear if the buyer browses back to /checkout
+    // Only clear the cart when this order matches the cart's current event —
+    // otherwise opening an old confirmation in a second tab would nuke the
+    // work-in-progress cart for a DIFFERENT event the user is shopping for
+    // in another tab (Pinia persist syncs across tabs).
     const cartStore = useCartStore()
-    cartStore.clearCart()
+    const orderEventId = order.value?.event?.id ?? order.value?.event_id
+    if (orderEventId && cartStore.eventId && Number(orderEventId) === Number(cartStore.eventId)) {
+      cartStore.clearCart()
+    }
   } catch {
     showError({ statusCode: 404, statusMessage: 'Commande introuvable' })
   } finally {
@@ -149,13 +156,35 @@ onBeforeUnmount(() => stopPolling())
           <p class="text-sm text-text-tertiary">Votre paiement est en attente de confirmation. Cette page se met a jour automatiquement.</p>
         </template>
 
-        <!-- Failed -->
+        <!-- Failed : 3 actions au lieu d'une impasse -->
         <template v-else-if="order.status === 'failed'">
           <div class="flex items-center gap-2 mb-1">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-text-tertiary"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            <h1 class="text-lg font-semibold text-text-primary">Paiement echoue</h1>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-red-error"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            <h1 class="text-lg font-semibold text-text-primary">Paiement échoué</h1>
           </div>
-          <p class="text-sm text-text-tertiary">Le paiement n'a pas pu etre traite. Veuillez reessayer.</p>
+          <p class="text-sm text-text-tertiary mb-4">Le paiement n'a pas pu être traité. Vous pouvez réessayer immédiatement.</p>
+          <div class="flex flex-col sm:flex-row gap-2 mb-2">
+            <NuxtLink
+              :to="{ path: '/checkout', query: order.event?.slug ? { event: order.event.slug, retry: order.reference } : { retry: order.reference } }"
+              class="inline-flex items-center justify-center px-5 py-2.5 rounded-full bg-orange-primary text-white text-sm font-bold hover:bg-orange-light transition-colors"
+            >
+              Réessayer le paiement
+            </NuxtLink>
+            <NuxtLink
+              v-if="order.event?.slug || order.event?.id"
+              :to="`/events/${order.event?.slug || order.event?.id}`"
+              class="inline-flex items-center justify-center px-5 py-2.5 rounded-full bg-surface-2 text-text-primary text-sm font-semibold hover:bg-surface-3 transition-colors"
+            >
+              Essayer un autre moyen
+            </NuxtLink>
+            <NuxtLink
+              to="/dashboard/support"
+              class="inline-flex items-center justify-center px-5 py-2.5 rounded-full border border-border-light text-text-secondary text-sm font-semibold hover:border-orange-primary hover:text-orange-primary transition-colors"
+            >
+              Contacter le support
+            </NuxtLink>
+          </div>
+          <p class="text-xs text-text-tertiary mt-1">Référence à communiquer au support : <span class="font-mono text-text-primary">{{ order.reference || orderId }}</span></p>
         </template>
 
         <!-- Fallback -->

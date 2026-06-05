@@ -76,13 +76,19 @@ const eventTypes = [
   { name: 'Événement communautaire', desc: 'Religieux, culturel, politique — gérez vos événements de toutes tailles.', icon: 'users' },
 ]
 
-const testimonials = [
-  { quote: 'BilletEvent nous a permis de créer rapidement une page événement claire et professionnelle. La gestion des inscriptions et des paiements s\'est faite sans effort.', name: 'Yannick Tshamba', role: 'Organisateur d\'événements', initials: 'YT', featured: true },
-  { quote: 'J\'organise régulièrement des formations et ateliers. Avec BilletEvent, je peux gérer mon programme, mes participants et mes ventes depuis un seul outil.', name: 'Moussa Kébé', role: 'Coach & formateur indépendant', initials: 'MK', avatarClass: 'bg-orange-dim text-orange-primary' },
-  { quote: 'La plateforme est simple et très intuitive. Nous avons pu vendre nos billets en ligne et suivre les ventes en temps réel.', name: 'Ndeye Kouyaté', role: 'Responsable culturelle', initials: 'NK', avatarClass: 'bg-blue-main/8 text-text-secondary' },
-  { quote: 'BilletEvent nous a aidés à structurer notre événement du début à la fin : page, billetterie, participants et suivi post-événement.', name: 'Landry Sissoko', role: 'Directeur événementiel', initials: 'LS', avatarClass: 'bg-green-dim text-green-dark' },
-  { quote: 'Grâce à BilletEvent, nous avons pu accepter plusieurs moyens de paiement, rendant notre événement accessible à un plus large public.', name: 'Léa Montclair', role: 'Responsable culturelle & business', initials: 'LM', avatarClass: 'bg-orange-dim text-orange-primary' },
-]
+// Testimonials are intentionally empty until real customer quotes are
+// collected and approved. The "Témoignages" section template uses
+// v-if="testimonials.length" so it's hidden until then. NEVER add
+// fictional testimonials — risque réputationnel et juridique (publicité
+// trompeuse). See AUDIT.md.
+const testimonials: Array<{
+  quote: string
+  name: string
+  role: string
+  initials: string
+  featured?: boolean
+  avatarClass?: string
+}> = []
 
 const faqItems = [
   { q: 'Qu\'est-ce que BilletEvent ?', a: 'BilletEvent est une plateforme sénégalaise de billetterie en ligne qui permet aux organisateurs de créer des pages événements, vendre des billets, gérer les participants et suivre leurs ventes en temps réel. Elle accepte les paiements via Wave, Orange Money et Free Money.' },
@@ -99,24 +105,41 @@ const faqItems = [
 
 <template>
   <div>
+    <!-- Hero acheteur-first : trouver un événement avant tout, organisateur en CTA secondaire.
+         (Avant : 100% pitch organisateur, un acheteur arrivant via SEO n'avait pas sa place.) -->
     <section>
       <div class="px-5 md:px-10 pt-5 pb-10 max-w-[1200px] mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-15 items-center">
         <div>
           <h1 class="font-serif text-[2.2rem] sm:text-[2.8rem] lg:text-[3.4rem] leading-[1.1] text-text-primary mb-5 tracking-tight">
-            Créez, vendez et gérez <em class="italic text-orange-primary">vos événements</em><br />
-            en un clic
+            Vivez vos prochains <em class="italic text-orange-primary">événements</em><br />
+            sans tracas
           </h1>
-          <p class="text-base text-text-tertiary leading-[1.7] mb-9 max-w-[460px]">
-            Une plateforme de billetterie simple et efficace pour tous vos événements. Suivez vos ventes en temps réel et offrez une expérience fluide à vos participants.
+          <p class="text-base text-text-tertiary leading-[1.7] mb-7 max-w-[460px]">
+            Concerts, conférences, soirées, formations — tout ce qui se passe près de chez vous, en quelques tapes.
+            <span class="block mt-1 text-text-secondary">Vous êtes organisateur ?
+              <NuxtLink to="/dashboard/events/quick" class="text-orange-primary font-semibold hover:underline">Publiez un événement en 2 min →</NuxtLink>
+            </span>
           </p>
-          <div class="flex items-center gap-3.5 flex-wrap">
-            <NuxtLink to="/dashboard/events/create" class="bg-orange-primary text-white px-[30px] py-[14px] rounded-full text-[0.9rem] font-bold transition-all duration-200 inline-flex items-center gap-2 hover:bg-orange-light hover:-translate-y-0.5 ">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              Créer un événement
+
+          <!-- CTAs primaires acheteur -->
+          <div class="flex items-center gap-3.5 flex-wrap mb-5">
+            <NuxtLink to="/events" class="bg-orange-primary text-white px-[30px] py-[14px] rounded-full text-[0.9rem] font-bold transition-all duration-200 inline-flex items-center gap-2 hover:bg-orange-light hover:-translate-y-0.5">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              Trouver un événement
             </NuxtLink>
-            <NuxtLink to="/events" class="border border-border-light text-text-primary px-[26px] py-[13px] rounded-full text-[0.9rem] font-bold transition-all duration-200 inline-flex items-center gap-2 hover:border-orange-primary hover:text-orange-primary">
-              Parcourir les événements
+            <NuxtLink to="/events?date=weekend" class="border border-border-light text-text-primary px-[26px] py-[13px] rounded-full text-[0.9rem] font-bold transition-all duration-200 inline-flex items-center gap-2 hover:border-orange-primary hover:text-orange-primary">
+              Ce week-end
             </NuxtLink>
+          </div>
+
+          <!-- Chips catégories cliquables -->
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-xs text-text-tertiary uppercase tracking-wider font-bold">Catégories :</span>
+            <NuxtLink to="/events?cat=Musique" class="px-3 py-1 rounded-full text-xs font-semibold text-text-secondary bg-surface-2 hover:bg-orange-dim hover:text-orange-primary transition-colors">Musique</NuxtLink>
+            <NuxtLink to="/events?cat=Business" class="px-3 py-1 rounded-full text-xs font-semibold text-text-secondary bg-surface-2 hover:bg-orange-dim hover:text-orange-primary transition-colors">Business</NuxtLink>
+            <NuxtLink to="/events?cat=Sport" class="px-3 py-1 rounded-full text-xs font-semibold text-text-secondary bg-surface-2 hover:bg-orange-dim hover:text-orange-primary transition-colors">Sport</NuxtLink>
+            <NuxtLink to="/events?cat=Formation" class="px-3 py-1 rounded-full text-xs font-semibold text-text-secondary bg-surface-2 hover:bg-orange-dim hover:text-orange-primary transition-colors">Formation</NuxtLink>
+            <NuxtLink to="/events?cat=Art" class="px-3 py-1 rounded-full text-xs font-semibold text-text-secondary bg-surface-2 hover:bg-orange-dim hover:text-orange-primary transition-colors">Art</NuxtLink>
           </div>
         </div>
 
@@ -145,6 +168,42 @@ const faqItems = [
         </div>
       </div>
     </div>
+
+    <!-- ─── ÉVÉNEMENTS À LA UNE ────────────────────────────────────
+         Les featured events étaient chargés depuis l'API (l.25) mais
+         jamais rendus dans le template — UX bloquant : aucun event
+         visible sur la home pour un visiteur acheteur. -->
+    <section v-if="featuredEvents.length > 0" id="featured" class="bg-bg-primary">
+      <div class="py-12 md:py-16 px-5 md:px-10 max-w-[1200px] mx-auto">
+        <div class="flex items-end justify-between mb-6 flex-wrap gap-3">
+          <div>
+            <div class="text-[0.7rem] font-bold tracking-[0.12em] uppercase text-orange-primary mb-2">À la une</div>
+            <h2 class="font-serif text-[1.6rem] md:text-[2rem] leading-tight text-text-primary">Événements en vedette</h2>
+          </div>
+          <NuxtLink to="/events" class="text-sm font-bold text-orange-primary hover:underline shrink-0">
+            Voir tous les événements →
+          </NuxtLink>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <NuxtLink
+            v-for="evt in featuredEvents.slice(0, 6)"
+            :key="evt.id"
+            :to="`/events/${evt.slug || evt.id}`"
+            class="block no-underline"
+          >
+            <EventEventCard
+              :title="evt.title"
+              :date="formatStat(evt.date_start ? new Date(evt.date_start).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) : '')"
+              :location="[evt.venue || evt.location, evt.city].filter(Boolean).join(', ')"
+              :price="evt.min_price === 0 ? 'Gratuit' : (evt.min_price ? formatStat(evt.min_price) + ' F CFA' : '')"
+              :category="evt.category || ''"
+              :image="evt.flyer_url || ''"
+              :event="evt"
+            />
+          </NuxtLink>
+        </div>
+      </div>
+    </section>
 
     <section id="fonctionnalites">
       <div class="py-16 md:py-20 px-5 md:px-10 max-w-[1100px] mx-auto">
@@ -607,7 +666,7 @@ const faqItems = [
       </div>
     </section>
 
-    <section id="temoignages">
+    <section v-if="testimonials.length > 0" id="temoignages">
       <div class="py-24 px-5 md:px-10 bg-white">
         <div class="max-w-[1100px] mx-auto">
           <div class="text-center mb-12">

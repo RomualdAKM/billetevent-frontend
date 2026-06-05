@@ -5,6 +5,7 @@ const api = useOrganizerApi()
 const { success, error } = useNotification()
 const authStore = useAuthStore()
 const { countries, fetchOperators, getOperatorsForCountry, getCountryInfo } = usePaymentOperators()
+const { formatNumberInput, parseNumberInput } = useFormatters()
 
 const loading = ref(false)
 const txLoading = ref(false)
@@ -302,15 +303,18 @@ onMounted(async () => {
 
         <div>
           <label class="text-sm font-semibold text-text-secondary mb-2 block">Montant à retirer</label>
+          <!-- Format live avec séparateur de milliers : tape "500000",
+               affiche "500 000". Évite l'erreur coûteuse "j'ai tapé 5M au
+               lieu de 500K" sans s'en rendre compte. -->
           <input
-            v-model="withdrawAmount"
-            type="number"
+            :value="formatNumberInput(withdrawAmount)"
+            type="text"
             inputmode="numeric"
-            min="5000"
-            :max="availableBalance"
-            placeholder="Ex: 500000"
-            class="border rounded-lg px-4 py-3 w-full text-base bg-white focus:outline-none transition-[border-color] duration-150"
+            autocomplete="off"
+            placeholder="Ex : 500 000"
+            class="border rounded-lg px-4 py-3 w-full text-base bg-white focus:outline-none transition-[border-color] duration-150 tabular-nums"
             :class="withdrawAmountError ? 'border-red-error focus:border-red-error' : 'border-border-light focus:border-orange-primary'"
+            @input="(e) => { const v = parseNumberInput((e.target as HTMLInputElement).value); withdrawAmount = v === null ? '' : String(v) }"
           />
           <div v-if="withdrawAmountError" class="text-xs text-red-error mt-1.5">{{ withdrawAmountError }}</div>
           <div v-else class="text-xs text-text-tertiary mt-1.5">Minimum : 5 000 F CFA</div>
@@ -461,7 +465,11 @@ onMounted(async () => {
         :rows="filteredTransactions"
         :loading="txLoading"
         empty-title="Aucune transaction"
-        empty-description="Aucune transaction pour cette période."
+        :empty-description="totalBalance === 0
+          ? 'Votre portefeuille s\'activera dès votre première vente. Créez un événement pour commencer.'
+          : 'Aucune transaction sur cette période. Essayez un autre filtre.'"
+        :empty-action-label="totalBalance === 0 ? 'Créer un événement' : ''"
+        @empty-action="navigateTo('/dashboard/events/create')"
       >
         <template #cell-created_at="{ row }">
           <span class="text-sm text-text-secondary">{{ formatDate(row.created_at) }}</span>

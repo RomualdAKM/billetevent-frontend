@@ -1,15 +1,24 @@
 <script setup lang="ts">
 const props = defineProps({
   open: { type: Boolean, default: false },
-  links: { type: Array, default: () => [] },
+  links: { type: Array as PropType<Array<{ to: string; label: string }>>, default: () => [] },
 })
 
 const emit = defineEmits(['close'])
 
+const route = useRoute()
 const authStore = useAuthStore()
 const notificationStore = useNotificationStore()
 const { logout: apiLogout } = useAuthApi()
 const loggingOut = ref(false)
+
+// Active state cohérent avec la nav desktop : un lien est actif si la route
+// actuelle commence par son `to` (sauf "/" qui demande match strict).
+const isLinkActive = (to: string): boolean => {
+  if (!to) return false
+  if (to === '/') return route.path === '/'
+  return route.path === to || route.path.startsWith(to + '/')
+}
 
 const handleLogout = async () => {
   if (loggingOut.value) return
@@ -57,7 +66,13 @@ const handleLogout = async () => {
               v-for="link in links"
               :key="link.label"
               :to="link.to"
-              class="text-base font-medium text-text-secondary px-4 py-3.5 rounded-lg hover:bg-surface-2 hover:text-text-primary transition-all duration-150"
+              :class="[
+                'text-base font-medium px-4 py-3.5 rounded-lg transition-all duration-150',
+                isLinkActive(link.to)
+                  ? 'bg-orange-dim text-orange-primary'
+                  : 'text-text-secondary hover:bg-surface-2 hover:text-text-primary',
+              ]"
+              :aria-current="isLinkActive(link.to) ? 'page' : undefined"
               @click="emit('close')"
             >
               {{ link.label }}

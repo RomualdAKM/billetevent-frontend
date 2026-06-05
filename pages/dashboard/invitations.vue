@@ -23,22 +23,34 @@ const tableColumns = [
   { key: 'status', label: 'Statut' },
 ]
 
+// Must mirror App\Enums\InvitationType exactly (vip/press/partner/staff/sponsor/artist).
+// Tokens validated against assets/css/main.css — no pink-* tokens exist, so
+// artist uses the red-dim variant for visual distinction from the others.
 const typeClassMap: Record<string, string> = {
   vip: 'bg-gold-dim text-gold',
   press: 'bg-blue-dim text-blue-main',
-  partner: 'bg-purple-dim text-purple'
+  partner: 'bg-purple-dim text-purple',
+  staff: 'bg-orange-dim text-orange-primary',
+  sponsor: 'bg-green-dim text-green-dark',
+  artist: 'bg-red-dim text-red-error',
 }
 
 const typeLabelMap: Record<string, string> = {
   vip: 'VIP',
   press: 'Presse',
-  partner: 'Partenaire'
+  partner: 'Partenaire',
+  staff: 'Staff',
+  sponsor: 'Sponsor',
+  artist: 'Artiste',
 }
 
 const typeVariantMap: Record<string, 'success' | 'warning' | 'error' | 'info' | 'neutral'> = {
   VIP: 'warning',
   Presse: 'info',
   Partenaire: 'neutral',
+  Staff: 'warning',
+  Sponsor: 'success',
+  Artiste: 'info',
 }
 
 const statusClassMap: Record<string, string> = {
@@ -414,6 +426,9 @@ onMounted(() => {
               <option value="vip">VIP</option>
               <option value="press">Presse</option>
               <option value="partner">Partenaire</option>
+              <option value="staff">Staff</option>
+              <option value="sponsor">Sponsor</option>
+              <option value="artist">Artiste</option>
             </select>
           </div>
           <div>

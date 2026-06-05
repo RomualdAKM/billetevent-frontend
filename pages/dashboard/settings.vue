@@ -4,9 +4,10 @@ definePageMeta({ layout: 'dashboard', middleware: ['auth', 'organizer'] })
 const activeTab = ref('profil')
 
 const tabs = [
-  { key: 'profil', label: 'Profil' },
+  { key: 'profil', label: 'Profil & Organisation' },
   { key: 'notifications', label: 'Notifications' },
   { key: 'paiements', label: 'Paiements' },
+  { key: 'securite', label: 'Sécurité' },
 ]
 </script>
 
@@ -32,6 +33,7 @@ const tabs = [
       <DashboardProfileTab v-if="activeTab === 'profil'" />
       <DashboardNotificationsTab v-if="activeTab === 'notifications'" />
       <DashboardPaymentsTab v-if="activeTab === 'paiements'" />
+      <DashboardSecurityTab v-if="activeTab === 'securite'" />
     </div>
   </div>
 </template>

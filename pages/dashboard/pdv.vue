@@ -124,8 +124,15 @@ async function saveEdit() {
 async function openSales(pdv: any) {
   selectedPdv.value = pdv
   showSales.value = true
+  // Capture the PDV id at request time. If the user clicks a DIFFERENT PDV
+  // before this one's stats resolve, we drop the stale response instead of
+  // clobbering the new selection (race-condition guard).
+  const requestedId = pdv.id
   try {
     const res = await api.getPdvStats(pdv.id)
+    if (selectedPdv.value?.id !== requestedId) {
+      return // user has navigated to another PDV — ignore stale data
+    }
     const data = res.data ?? res
     const sales = (data.sales || []).map((s: any) => ({
       date: s.sold_at ? new Date(s.sold_at).toLocaleString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—',
@@ -144,12 +151,14 @@ async function openSales(pdv: any) {
       revenue: formatNumber(totalRevenue),
     }
     // Patch the list entry so the KPI tile updates with real revenue
-    const idx = pdvs.value.findIndex((p: any) => p.id === pdv.id)
+    const idx = pdvs.value.findIndex((p: any) => p.id === requestedId)
     if (idx !== -1) {
       pdvs.value[idx] = { ...pdvs.value[idx], revenueNum: totalRevenue, revenue: formatNumber(totalRevenue) }
     }
   } catch {
-    useNotification().error('Impossible de charger les statistiques du point de vente')
+    if (selectedPdv.value?.id === requestedId) {
+      useNotification().error('Impossible de charger les statistiques du point de vente')
+    }
   }
 }
 

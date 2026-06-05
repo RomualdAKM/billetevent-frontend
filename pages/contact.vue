@@ -111,20 +111,23 @@ async function handleSubmit() {
                 <input
                   v-model="form.name"
                   type="text"
-                  placeholder="John Doe"
+                  autocomplete="name"
+                  placeholder="Awa Diallo"
                   class="w-full px-4 py-3 rounded-xl border border-border-light bg-bg-primary text-text-primary text-sm outline-none transition-colors duration-200 focus:border-orange-primary focus:ring-2 focus:ring-orange-primary/10"
                 />
-                <span v-if="errors.name" class="text-xs text-red-500 mt-1">{{ errors.name }}</span>
+                <span v-if="errors.name" class="text-xs text-red-error mt-1">{{ errors.name }}</span>
               </div>
               <div>
                 <label class="block text-xs font-semibold text-text-primary mb-1.5">Votre email *</label>
                 <input
                   v-model="form.email"
                   type="email"
-                  placeholder="john@example.com"
+                  autocomplete="email"
+                  inputmode="email"
+                  placeholder="awa@exemple.com"
                   class="w-full px-4 py-3 rounded-xl border border-border-light bg-bg-primary text-text-primary text-sm outline-none transition-colors duration-200 focus:border-orange-primary focus:ring-2 focus:ring-orange-primary/10"
                 />
-                <span v-if="errors.email" class="text-xs text-red-500 mt-1">{{ errors.email }}</span>
+                <span v-if="errors.email" class="text-xs text-red-error mt-1">{{ errors.email }}</span>
               </div>
               <div>
                 <label class="block text-xs font-semibold text-text-primary mb-1.5">Sujet *</label>
@@ -135,7 +138,7 @@ async function handleSubmit() {
                   <option value="" disabled>Sélectionnez un sujet</option>
                   <option v-for="s in subjects" :key="s" :value="s">{{ s }}</option>
                 </select>
-                <span v-if="errors.subject" class="text-xs text-red-500 mt-1">{{ errors.subject }}</span>
+                <span v-if="errors.subject" class="text-xs text-red-error mt-1">{{ errors.subject }}</span>
               </div>
               <div>
                 <label class="block text-xs font-semibold text-text-primary mb-1.5">Votre message *</label>
@@ -145,7 +148,7 @@ async function handleSubmit() {
                   placeholder="Décrivez votre demande..."
                   class="w-full px-4 py-3 rounded-xl border border-border-light bg-bg-primary text-text-primary text-sm outline-none transition-colors duration-200 focus:border-orange-primary focus:ring-2 focus:ring-orange-primary/10 resize-none"
                 ></textarea>
-                <span v-if="errors.message" class="text-xs text-red-500 mt-1">{{ errors.message }}</span>
+                <span v-if="errors.message" class="text-xs text-red-error mt-1">{{ errors.message }}</span>
               </div>
               <label class="flex items-center gap-2.5 cursor-pointer">
                 <input v-model="form.newsletter" type="checkbox" class="w-4 h-4 rounded border-border-light accent-orange-primary" />

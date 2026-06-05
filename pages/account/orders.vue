@@ -447,18 +447,33 @@ const confirmRefund = async () => {
       </div>
     </div>
 
-    <!-- Empty state -->
-    <div v-else class="flex flex-col items-center justify-center py-16 text-center">
-      <svg width="48" height="48" viewBox="0 0 24 24" class="text-text-tertiary/20 mb-4" fill="none" stroke="currentColor" stroke-width="1.5">
+    <!-- Empty state actionnable : message + 2 CTAs (parcourir + favoris) -->
+    <div v-else class="flex flex-col items-center justify-center py-16 px-4 text-center">
+      <svg width="48" height="48" viewBox="0 0 24 24" class="text-text-tertiary/30 mb-4" fill="none" stroke="currentColor" stroke-width="1.5">
         <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" /><line x1="3" y1="6" x2="21" y2="6" /><path d="M16 10a4 4 0 0 1-8 0" />
       </svg>
-      <p class="text-sm text-text-secondary mb-4">Aucun achat pour le moment</p>
-      <NuxtLink
-        to="/events"
-        class="px-6 py-2.5 rounded-lg text-sm font-medium bg-orange-primary text-white hover:bg-orange-light transition-colors no-underline"
-      >
-        Découvrir des événements
-      </NuxtLink>
+      <h3 class="text-base font-semibold text-text-primary mb-1">
+        {{ activeTab === 'all' ? 'Aucun achat pour le moment' : 'Aucune commande dans cette catégorie' }}
+      </h3>
+      <p class="text-sm text-text-secondary max-w-sm mb-5">
+        {{ activeTab === 'all'
+          ? 'Trouvez votre prochain événement. Concerts, conférences, soirées — tout se passe ici.'
+          : 'Vos commandes correspondant à ce filtre apparaîtront ici.' }}
+      </p>
+      <div class="flex flex-col sm:flex-row gap-2">
+        <NuxtLink
+          to="/events"
+          class="inline-flex items-center justify-center px-5 py-2.5 rounded-full text-sm font-bold bg-orange-primary text-white hover:bg-orange-light transition-colors no-underline"
+        >
+          Découvrir des événements
+        </NuxtLink>
+        <NuxtLink
+          to="/account/favorites"
+          class="inline-flex items-center justify-center px-5 py-2.5 rounded-full text-sm font-semibold border border-border-light text-text-secondary hover:border-orange-primary hover:text-orange-primary transition-colors no-underline"
+        >
+          Mes favoris
+        </NuxtLink>
+      </div>
     </div>
 
     <!-- Refund confirmation modal -->

@@ -110,7 +110,7 @@ const handleRegister = async () => {
         <label class="block text-[0.78rem] font-semibold text-text-secondary mb-1.5 tracking-[0.01em]">
           Adresse email <span class="text-orange-primary ml-0.5">*</span>
         </label>
-        <input v-model="email" type="email" autocomplete="email" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="you@example.com" class="w-full px-3.5 py-2.5 border-[1.5px] rounded-lg font-sans text-[0.87rem] text-text-primary bg-surface outline-none placeholder:text-text-tertiary focus:border-orange-primary transition-colors" :class="errors.email ? 'border-red-error' : 'border-border-light'" @input="errors.email = ''" />
+        <input v-model="email" type="email" autocomplete="email" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="vous@exemple.com" class="w-full px-3.5 py-2.5 border-[1.5px] rounded-lg font-sans text-[0.87rem] text-text-primary bg-surface outline-none placeholder:text-text-tertiary focus:border-orange-primary transition-colors" :class="errors.email ? 'border-red-error' : 'border-border-light'" @input="errors.email = ''" />
         <p v-if="errors.email" class="text-[0.75rem] text-red-error mt-1">{{ errors.email }}</p>
       </div>
       <div class="mb-4">

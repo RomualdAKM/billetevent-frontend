@@ -13,16 +13,71 @@ useSeoMeta({
 const { getEvents, toggleFavorite: apiFavorite, getFavorites } = useEventsApi()
 const { error: notifyError } = useNotification()
 const authStore = useAuthStore()
+const route = useRoute()
+const router = useRouter()
 
-const search = ref('')
-const activeCategory = ref('Tous')
-const sortBy = ref('recommended')
-const verifiedOnly = ref(false)
-const currentPage = ref(1)
+// URL state : filtres persistés dans l'URL (?cat=musique&q=afro&page=2&date=weekend&city=Dakar&verified=1)
+// Permet : partage URL filtrée, survie F5, navigation back/forward propre, SEO.
+const search = ref<string>((route.query.q as string) || '')
+const activeCategory = ref<string>((route.query.cat as string) || 'Tous')
+const sortBy = ref<string>((route.query.sort as string) || 'recommended')
+const verifiedOnly = ref<boolean>(route.query.verified === '1')
+const currentPage = ref<number>(Math.max(1, parseInt(route.query.page as string) || 1))
+const datePreset = ref<string>((route.query.date as string) || '')
+const cityFilter = ref<string>((route.query.city as string) || '')
 const itemsPerPage = 9
 const favorites = ref<Set<number | string>>(new Set())
 
-const categories = ['Tous', 'Musique', 'Business', 'Art', 'Sport', 'Formation', 'Tech', 'Food']
+// Presets date : ce week-end / cette semaine / ce mois
+function computeDateRange(preset: string): { from?: string; to?: string } {
+  if (!preset) return {}
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const toIso = (d: Date) => d.toISOString().split('T')[0]
+  if (preset === 'weekend') {
+    // Du vendredi 18h au dimanche 23h59
+    const day = today.getDay() // 0=dim, 6=sam
+    const daysUntilFri = (5 - day + 7) % 7
+    const from = new Date(today); from.setDate(from.getDate() + daysUntilFri)
+    const to = new Date(from); to.setDate(to.getDate() + (day === 0 ? 0 : 2))
+    return { from: toIso(from), to: toIso(to) }
+  }
+  if (preset === 'week') {
+    const to = new Date(today); to.setDate(to.getDate() + 7)
+    return { from: toIso(today), to: toIso(to) }
+  }
+  if (preset === 'month') {
+    const to = new Date(today.getFullYear(), today.getMonth() + 1, today.getDate())
+    return { from: toIso(today), to: toIso(to) }
+  }
+  return {}
+}
+
+const datePresets = [
+  { value: '', label: 'Toutes les dates' },
+  { value: 'weekend', label: 'Ce week-end' },
+  { value: 'week', label: 'Cette semaine' },
+  { value: 'month', label: 'Ce mois' },
+]
+
+// Categories must mirror App\Enums\EventCategory (backend stores lowercase slugs:
+// musique/business/art/sport/formation/tech/gastronomie/autre). The frontend
+// displays the human label but sends the slug to the backend filter — otherwise
+// `?category=Food` never matches `category='gastronomie'` and the filter is a no-op.
+const categoryDefs = [
+  { label: 'Tous', slug: '' },
+  { label: 'Musique', slug: 'musique' },
+  { label: 'Business', slug: 'business' },
+  { label: 'Art', slug: 'art' },
+  { label: 'Sport', slug: 'sport' },
+  { label: 'Formation', slug: 'formation' },
+  { label: 'Tech', slug: 'tech' },
+  { label: 'Gastronomie', slug: 'gastronomie' },
+  { label: 'Autre', slug: 'autre' },
+] as const
+
+const categories = categoryDefs.map(c => c.label)
+const categorySlugFor = (label: string) => categoryDefs.find(c => c.label === label)?.slug ?? ''
 
 const sortOptions = [
   { value: 'recommended', label: 'Recommandés' },
@@ -32,7 +87,11 @@ const sortOptions = [
   { value: 'popular', label: 'Les plus populaires' },
 ]
 
+// Backend accepted sorts. "recommended" maps to popularity by default
+// (events à venir triés par ventes décroissantes), pour que l'option par défaut
+// ne soit pas un no-op silencieux côté serveur.
 const sortMap: Record<string, string> = {
+  'recommended': 'popularity',
   'price-asc': 'price_asc',
   'price-desc': 'price_desc',
   'date': 'date',
@@ -59,10 +118,34 @@ const apiParams = computed(() => {
     page: currentPage.value,
     per_page: itemsPerPage,
   }
-  if (activeCategory.value !== 'Tous') params.category = activeCategory.value
+  if (activeCategory.value !== 'Tous') {
+    const slug = categorySlugFor(activeCategory.value)
+    if (slug) params.category = slug
+  }
   if (search.value.trim()) params.search = search.value.trim()
   if (sortMap[sortBy.value]) params.sort = sortMap[sortBy.value]
+  // Push verified filter to the API so pagination + count are coherent.
+  if (verifiedOnly.value) params.verified = 1
+  if (cityFilter.value.trim()) params.city = cityFilter.value.trim()
+  const dateRange = computeDateRange(datePreset.value)
+  if (dateRange.from) params.date_from = dateRange.from
+  if (dateRange.to) params.date_to = dateRange.to
   return params
+})
+
+// Sync URL ↔ filtres : à chaque changement de filtre, on met à jour la query
+// de l'URL pour permettre le partage + survie F5 + back/forward.
+watchEffect(() => {
+  if (!import.meta.client) return
+  const q: Record<string, string> = {}
+  if (search.value.trim()) q.q = search.value.trim()
+  if (activeCategory.value !== 'Tous') q.cat = activeCategory.value
+  if (sortBy.value !== 'recommended') q.sort = sortBy.value
+  if (verifiedOnly.value) q.verified = '1'
+  if (currentPage.value > 1) q.page = String(currentPage.value)
+  if (datePreset.value) q.date = datePreset.value
+  if (cityFilter.value.trim()) q.city = cityFilter.value.trim()
+  router.replace({ query: q })
 })
 
 const { data: apiResponse, status, refresh } = await useLazyAsyncData(
@@ -73,11 +156,9 @@ const { data: apiResponse, status, refresh } = await useLazyAsyncData(
 
 const loading = computed(() => status.value === 'pending')
 
-const paginatedEvents = computed(() => {
-  const items = apiResponse.value?.data ?? []
-  if (!verifiedOnly.value) return items
-  return items.filter((e: any) => e.is_verified)
-})
+// Verified filter is now applied server-side (cf. apiParams) — pas de filtre
+// client supplémentaire qui casserait le count/pagination.
+const paginatedEvents = computed(() => apiResponse.value?.data ?? [])
 
 const meta = computed(() => apiResponse.value?.meta ?? { total: 0, last_page: 1 })
 const resultCount = computed(() => meta.value.total ?? 0)
@@ -92,7 +173,7 @@ watch(search, () => {
   }, 300)
 })
 
-watch([activeCategory, sortBy, verifiedOnly], () => {
+watch([activeCategory, sortBy, verifiedOnly, datePreset, cityFilter], () => {
   currentPage.value = 1
 })
 
@@ -131,6 +212,8 @@ const resetFilters = () => {
   sortBy.value = 'recommended'
   verifiedOnly.value = false
   currentPage.value = 1
+  datePreset.value = ''
+  cityFilter.value = ''
 }
 </script>
 
@@ -148,10 +231,26 @@ const resetFilters = () => {
         </div>
       </div>
 
-      <div class="flex gap-2 flex-wrap mb-6">
+      <!-- Chips date (critère n°1 en ticketing : quand) -->
+      <div class="flex gap-2 flex-wrap mb-3">
+        <button
+          v-for="preset in datePresets"
+          :key="preset.value || 'all'"
+          type="button"
+          class="px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-colors cursor-pointer"
+          :class="datePreset === preset.value ? 'bg-text-primary text-white border-text-primary' : 'bg-surface border-border-light text-text-secondary hover:border-text-primary hover:text-text-primary'"
+          @click="datePreset = preset.value"
+        >
+          {{ preset.label }}
+        </button>
+      </div>
+
+      <!-- Chips catégorie -->
+      <div class="flex gap-2 flex-wrap mb-3">
         <button
           v-for="cat in categories"
           :key="cat"
+          type="button"
           class="px-4 py-2 rounded-full text-xs font-semibold border transition-colors cursor-pointer"
           :class="activeCategory === cat ? 'bg-orange-primary text-white border-orange-primary' : 'bg-surface border-border-light text-text-secondary hover:border-orange-primary hover:text-orange-primary'"
           @click="activeCategory = cat"
@@ -161,6 +260,18 @@ const resetFilters = () => {
       </div>
 
       <div class="flex flex-wrap items-center gap-3 mb-8">
+        <!-- Input ville (filtre lieu, critère n°2 en ticketing) -->
+        <div class="relative">
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary pointer-events-none" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          <input
+            v-model="cityFilter"
+            type="text"
+            autocomplete="address-level2"
+            placeholder="Ville"
+            class="bg-surface border border-border-light rounded-lg pl-9 pr-4 py-2 text-sm text-text-primary outline-none focus:border-orange-primary transition-colors w-32 md:w-44"
+          />
+        </div>
+
         <div class="relative">
           <select
             v-model="sortBy"
@@ -181,6 +292,7 @@ const resetFilters = () => {
         </label>
 
         <button
+          type="button"
           class="px-4 py-2 rounded-lg text-sm font-medium text-text-tertiary hover:text-orange-primary border border-border-light hover:border-orange-primary transition-colors cursor-pointer"
           @click="resetFilters"
         >

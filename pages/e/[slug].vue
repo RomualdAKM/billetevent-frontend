@@ -41,22 +41,62 @@ async function verifyInvitation() {
   }
   inviteLoading.value = true
   inviteError.value = ''
+  inviteVerified.value = false
+  inviteData.value = null
   try {
     const config = useRuntimeConfig()
     const res: any = await $fetch(`${config.public.apiBase}/invitations/${encodeURIComponent(code)}`)
-    inviteData.value = res?.data ?? res
-    if (inviteData.value?.event_id && event.value?.id && inviteData.value.event_id !== event.value.id) {
+    // showByToken returns a flat payload (no `data` wrapper) — keep the fallback
+    // for forward-compat with potential ApiResource wrapping.
+    const payload = res?.data ?? res
+
+    // Backend embeds the event as a nested object: `{ event: { id, title, ... } }`
+    // — NOT as a top-level `event_id`. Reading the wrong key would silently
+    // short-circuit the mismatch check and unlock any private event with
+    // any valid invitation token.
+    const inviteEventId = payload?.event?.id
+    if (!inviteEventId || !event.value?.id || inviteEventId !== event.value.id) {
       inviteError.value = "Cette invitation ne concerne pas cet événement."
-      inviteData.value = null
+      // Reset the input so the failed code can't be smuggled into goToCheckout.
+      inviteToken.value = ''
       return
     }
+
+    // Refuse expired / cancelled / already-used invitations
+    if (payload?.expired) {
+      inviteError.value = "Cet événement est déjà passé, votre invitation n'est plus valable."
+      inviteToken.value = ''
+      return
+    }
+    const status = String(payload?.status || '').toLowerCase()
+    if (!['pending', 'sent'].includes(status)) {
+      const human: Record<string, string> = {
+        accepted: 'Cette invitation a déjà été acceptée.',
+        scanned: 'Cette invitation a déjà été utilisée.',
+        cancelled: 'Cette invitation a été annulée.',
+      }
+      inviteError.value = human[status] || "Cette invitation n'est plus valable."
+      inviteToken.value = ''
+      return
+    }
+
+    inviteData.value = payload
     inviteVerified.value = true
   } catch (err: any) {
     inviteError.value = err?.data?.message || err?.message || 'Invitation invalide'
+    inviteToken.value = ''
   } finally {
     inviteLoading.value = false
   }
 }
+
+// If the buyer edits the code after verification, force a re-verify before checkout.
+watch(inviteToken, () => {
+  if (inviteVerified.value) {
+    inviteVerified.value = false
+    inviteData.value = null
+  }
+})
 
 // ── Pixels (organizer-defined Facebook/Google tracking) ────────
 watch(event, async (ev) => {
@@ -123,14 +163,32 @@ const ticketQuantities = ref<Record<number | string, number>>({})
 
 const passes = computed(() => {
   const list = event.value?.passes ?? []
-  return list.map((p: any) => ({
-    id: p.id,
-    name: p.name,
-    description: p.description,
-    price: p.price,
-    quantity: ticketQuantities.value[p.id] ?? 0,
-    remaining: p.available ?? Math.max(0, (p.capacity ?? 0) - (p.sold_count ?? 0)),
-  }))
+  const nowMs = Date.now()
+  return list.map((p: any) => {
+    const remaining = p.available ?? Math.max(0, (p.capacity ?? 0) - (p.sold_count ?? 0))
+    const startMs = p.sale_start_date ? new Date(p.sale_start_date).getTime() : null
+    const endMs = p.sale_end_date ? new Date(p.sale_end_date).getTime() : null
+    const isNotYetOnSale = startMs !== null && startMs > nowMs
+    const isSaleEnded = endMs !== null && endMs < nowMs
+    const isSoldOut = remaining <= 0
+    return {
+      id: p.id,
+      name: p.name,
+      description: p.description,
+      price: p.price,
+      // Honour the pass's own max_per_order — was hard-coded to 10
+      maxPerOrder: typeof p.max_per_order === 'number' ? p.max_per_order : 10,
+      quantity: ticketQuantities.value[p.id] ?? 0,
+      remaining,
+      saleStart: p.sale_start_date
+        ? new Date(p.sale_start_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
+        : '',
+      isSoldOut,
+      isNotYetOnSale,
+      isSaleEnded,
+      isOnSale: !isNotYetOnSale && !isSaleEnded && !isSoldOut,
+    }
+  })
 })
 
 const totalQuantity = computed(() =>
@@ -141,13 +199,16 @@ const totalPrice = computed(() =>
 )
 
 function decrease(p: any) {
+  if (!p.isOnSale || isPast.value) return
   if ((ticketQuantities.value[p.id] ?? 0) > 0) {
     ticketQuantities.value[p.id] = (ticketQuantities.value[p.id] ?? 0) - 1
   }
 }
 function increase(p: any) {
+  if (!p.isOnSale || isPast.value) return
   const current = ticketQuantities.value[p.id] ?? 0
-  if (current < 10 && current < p.remaining) {
+  const cap = typeof p.maxPerOrder === 'number' ? p.maxPerOrder : 10
+  if (current < cap && current < p.remaining) {
     ticketQuantities.value[p.id] = current + 1
   }
 }
@@ -178,6 +239,16 @@ const checkoutLoading = ref(false)
 
 async function goToCheckout() {
   if (!event.value || totalQuantity.value === 0) return
+
+  // Hard gate: private events require a VERIFIED invitation, not just a token
+  // string in the input (which the user could have typed without clicking
+  // "Vérifier", or which could have failed verification but stayed in state).
+  if (isPrivate.value && !inviteVerified.value) {
+    inviteError.value = "Veuillez vérifier votre code d'invitation avant de continuer."
+    scrollToInvitation()
+    return
+  }
+
   checkoutLoading.value = true
   try {
     cartStore.clearCart()
@@ -188,10 +259,10 @@ async function goToCheckout() {
 
     // ?from=landing tells the checkout page to stay in landing layout
     // (no BilletEvent navbar/footer) so the buyer keeps the "dedicated event
-    // page" feel through to payment. Persisted in the URL so it survives
-    // refresh and back/forward navigation.
+    // page" feel through to payment. The invitation token is propagated via
+    // query (survives refresh) AND state (immediate read by /checkout).
     const query: Record<string, string> = { from: 'landing' }
-    if (isPrivate.value && inviteToken.value) {
+    if (isPrivate.value && inviteVerified.value && inviteToken.value) {
       query.invitation = inviteToken.value.trim()
     }
     await navigateTo({
@@ -204,11 +275,17 @@ async function goToCheckout() {
         eventDate: eventDateLong.value,
         eventLocation: eventLocation.value,
         accessMode: accessMode.value,
-        invitationToken: isPrivate.value ? inviteToken.value.trim() : null,
+        invitationToken: (isPrivate.value && inviteVerified.value) ? inviteToken.value.trim() : null,
       },
     })
   } finally {
     checkoutLoading.value = false
+  }
+}
+
+function scrollToInvitation() {
+  if (typeof document !== 'undefined') {
+    document.getElementById('invitation-gate')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }
 }
 
@@ -647,7 +724,7 @@ watchEffect(() => {
     </section>
 
     <!-- ─── INVITATION GATE (private events) ──────────────── -->
-    <section v-if="!isPast && isPrivate && !inviteVerified" class="bg-surface py-12 px-5 scroll-mt-24">
+    <section id="invitation-gate" v-if="!isPast && isPrivate && !inviteVerified" class="bg-surface py-12 px-5 scroll-mt-24">
       <div class="max-w-[480px] mx-auto rounded-2xl border-2 border-orange-primary bg-orange-dim/30 p-8 text-center">
         <div class="w-14 h-14 rounded-full bg-orange-primary/15 flex items-center justify-center mx-auto mb-4">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-orange-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -703,10 +780,18 @@ watchEffect(() => {
             class="rounded-xl border border-border-light bg-bg-primary p-5 flex items-center justify-between gap-4 flex-wrap"
           >
             <div class="flex-1 min-w-0">
-              <div class="text-sm font-bold text-text-primary mb-0.5">{{ p.name }}</div>
+              <div class="flex items-center gap-2 flex-wrap mb-0.5">
+                <div class="text-sm font-bold text-text-primary">{{ p.name }}</div>
+                <span v-if="p.isSoldOut" class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-red-dim text-red-error">Épuisé</span>
+                <span v-else-if="p.isNotYetOnSale" class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-orange-dim text-orange-primary">Bientôt en vente</span>
+                <span v-else-if="p.isSaleEnded" class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-surface-2 text-text-tertiary">Vente terminée</span>
+              </div>
               <div v-if="p.description" class="text-xs text-text-tertiary mb-1.5 line-clamp-2">{{ p.description }}</div>
               <div class="font-serif text-[1.1rem] text-text-primary">{{ formatPrice(p.price) }}</div>
-              <div v-if="p.remaining > 0 && p.remaining < 20" class="text-[0.7rem] text-orange-primary font-semibold mt-1">
+              <div v-if="p.isNotYetOnSale && p.saleStart" class="text-[0.7rem] text-orange-primary font-semibold mt-1">
+                Mise en vente le {{ p.saleStart }}
+              </div>
+              <div v-else-if="p.remaining > 0 && p.remaining < 20" class="text-[0.7rem] text-orange-primary font-semibold mt-1">
                 Plus que {{ p.remaining }} restant{{ p.remaining > 1 ? 's' : '' }}
               </div>
             </div>
@@ -715,7 +800,7 @@ watchEffect(() => {
                 type="button"
                 aria-label="Diminuer la quantité"
                 class="w-11 h-11 rounded-lg border border-border-light bg-surface flex items-center justify-center cursor-pointer transition-colors text-lg text-text-secondary hover:border-orange-primary hover:text-orange-primary disabled:opacity-30 disabled:cursor-not-allowed"
-                :disabled="p.quantity === 0"
+                :disabled="p.quantity === 0 || !p.isOnSale"
                 @click="decrease(p)"
               >−</button>
               <span class="w-9 text-center font-bold text-base text-text-primary tabular-nums" aria-live="polite">{{ p.quantity }}</span>
@@ -723,7 +808,7 @@ watchEffect(() => {
                 type="button"
                 aria-label="Augmenter la quantité"
                 class="w-11 h-11 rounded-lg border border-border-light bg-surface flex items-center justify-center cursor-pointer transition-colors text-lg text-text-secondary hover:border-orange-primary hover:text-orange-primary disabled:opacity-30 disabled:cursor-not-allowed"
-                :disabled="p.quantity >= 10 || p.quantity >= p.remaining"
+                :disabled="!p.isOnSale || p.quantity >= p.maxPerOrder || p.quantity >= p.remaining"
                 @click="increase(p)"
               >+</button>
             </div>

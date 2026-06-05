@@ -104,3 +104,20 @@
 @utility animate-fade-in-up {
   animation: fade-in-up 0.4s ease-out both;
 }
+
+/* ============================================================
+   iOS auto-zoom prevention
+   Safari iOS zoome automatiquement sur input/select/textarea
+   dont la font-size effective est < 16px. C'est très désagréable
+   en mobile checkout, auth, wizard event create.
+   On force le min à 16px côté mobile uniquement — le design
+   visuel reste préservé sur desktop.
+   ============================================================ */
+@media (max-width: 640px) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']),
+  select,
+  textarea {
+    font-size: max(16px, 1em);
+  }
+}
+

@@ -48,10 +48,10 @@ const values = [
   { title: 'Confiance', desc: 'La transparence et la fiabilité sont au cœur de chacune de nos interactions.', icon: 'trust' },
 ]
 
-const partners = [
-  'AfriEvents', 'KolaBiz', 'Sunu Festival', 'DakarNights',
-  'AbidjanLive', 'Festival Maquis', 'Bamako Expo', 'CotoFest',
-]
+// Partners list is intentionally empty — NEVER add fictional partner names.
+// The "Ils nous font confiance" section uses v-if="partners.length" to hide
+// itself until real, contractually-confirmed partners are added.
+const partners: string[] = []
 </script>
 
 <template>
@@ -142,7 +142,7 @@ const partners = [
       </div>
     </section>
 
-    <section class="bg-white">
+    <section v-if="partners.length > 0" class="bg-white">
       <div class="px-5 md:px-10 py-20 max-w-[1200px] mx-auto">
         <div class="text-center mb-14">
           <div class="text-xs font-bold tracking-widest uppercase text-orange-primary mb-2.5">Partenaires</div>

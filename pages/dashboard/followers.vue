@@ -2,7 +2,8 @@
 definePageMeta({ layout: 'dashboard', middleware: ['auth', 'organizer'] })
 
 const api = useOrganizerApi()
-const { error: notifyError } = useNotification()
+const { success, error: notifyError } = useNotification()
+const authStore = useAuthStore()
 
 const loading = ref(true)
 const searchQuery = ref('')
@@ -10,6 +11,22 @@ const currentPage = ref(1)
 const totalPages = ref(1)
 const followers = ref<any[]>([])
 const stats = ref({ total: 0, new_this_month: 0, new_this_week: 0 })
+
+async function copyProfileLink() {
+  const id = (authStore.user as any)?.id
+  if (!id) {
+    notifyError('Profil non disponible')
+    return
+  }
+  const requestUrl = useRequestURL()
+  const link = `${requestUrl.origin}/organizers/${id}`
+  try {
+    await navigator.clipboard.writeText(link)
+    success('Lien du profil copié ! Partagez-le sur WhatsApp ou Instagram.')
+  } catch {
+    notifyError('Copie impossible — voici le lien : ' + link)
+  }
+}
 
 const avatarColors = [
   'var(--color-orange-primary)',
@@ -219,7 +236,7 @@ onMounted(() => loadFollowers())
     </div>
 
     <!-- Empty state -->
-    <div v-else class="bg-surface border border-border-light rounded-xl py-16 flex flex-col items-center justify-center text-center">
+    <div v-else class="bg-surface border border-border-light rounded-xl py-12 px-6 flex flex-col items-center justify-center text-center">
       <div class="w-14 h-14 rounded-full bg-surface-2 flex items-center justify-center mb-4">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-tertiary)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -229,7 +246,15 @@ onMounted(() => loadFollowers())
         </svg>
       </div>
       <div class="text-sm font-semibold text-text-secondary mb-1">Vous n'avez pas encore d'abonnés</div>
-      <div class="text-xs text-text-tertiary max-w-xs">Partagez vos événements pour attirer des abonnés à votre profil organisateur.</div>
+      <div class="text-xs text-text-tertiary max-w-sm mb-5">Partagez le lien de votre profil sur WhatsApp et les réseaux. Plus d'abonnés = audience pré-chauffée à chaque nouvel événement.</div>
+      <button
+        type="button"
+        class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold bg-orange-primary text-white hover:bg-orange-light transition-colors"
+        @click="copyProfileLink"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Copier le lien de mon profil
+      </button>
     </div>
 
     <!-- Pagination -->

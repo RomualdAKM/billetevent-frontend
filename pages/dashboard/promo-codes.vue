@@ -162,7 +162,9 @@ const formatDate = (dateStr: string | null) => {
       :rows="tableRows"
       :loading="loading"
       empty-title="Aucun code promo"
-      empty-description="Créez votre premier code de réduction pour stimuler vos ventes de billets."
+      empty-description="Créez votre premier code de réduction pour stimuler vos ventes de billets. Vous pouvez fixer un pourcentage, un montant fixe, une date d'expiration et un usage max."
+      empty-action-label="Créer mon premier code promo"
+      @empty-action="showCreateModal = true"
     >
       <template #cell-code="{ row }">
         <button

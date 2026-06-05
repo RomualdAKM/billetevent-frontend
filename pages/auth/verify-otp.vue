@@ -62,7 +62,17 @@ const handleVerifyOtp = async () => {
     const response = await verifyOtp({ email: userEmail.value, otp: code })
     authStore.setAuth(response.user as Record<string, unknown>, response.token)
     success('Compte vérifié avec succès !')
-    await navigateTo(getSafeRedirect(route.query.redirect))
+    // 1ère inscription → onboarding /welcome (sauf checkout/order en cours)
+    const ONBOARDING_KEY = 'billetevent_buyer_onboarding_v1'
+    let onboardingDone = false
+    try { onboardingDone = localStorage.getItem(ONBOARDING_KEY) === '1' } catch { /* silencieux */ }
+    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
+    const isCheckoutFlow = redirect && (redirect.includes('/checkout') || redirect.includes('/orders/'))
+    if (onboardingDone || isCheckoutFlow) {
+      await navigateTo(getSafeRedirect(route.query.redirect))
+    } else {
+      await navigateTo({ path: '/welcome', query: redirect ? { redirect } : {} })
+    }
   } catch (err: any) {
     if (err?.status === 422 && err?.errors) {
       if (err.errors.otp) otpError.value = err.errors.otp[0]

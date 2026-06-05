@@ -13,15 +13,17 @@ const props = withDefaults(
     loading?: boolean
     emptyTitle?: string
     emptyDescription?: string
+    emptyActionLabel?: string
   }>(),
   {
     loading: false,
     emptyTitle: 'Aucune donnée',
     emptyDescription: 'Il n\'y a rien à afficher pour le moment.',
+    emptyActionLabel: '',
   }
 )
 
-const emit = defineEmits<{ 'row-click': [row: any] }>()
+const emit = defineEmits<{ 'row-click': [row: any]; 'empty-action': [] }>()
 
 const hasRowClick = computed(() => {
   const instance = getCurrentInstance()
@@ -98,12 +100,14 @@ const skeletonRows = 5
             </tr>
           </template>
 
-          <!-- Empty state -->
+          <!-- Empty state — actionnable via @empty-action -->
           <tr v-else>
             <td :colspan="columns.length + ($slots.actions ? 1 : 0)">
               <UiEmptyState
                 :title="emptyTitle ?? 'Aucune donnée'"
                 :description="emptyDescription"
+                :action-label="emptyActionLabel"
+                @action="emit('empty-action')"
               />
             </td>
           </tr>

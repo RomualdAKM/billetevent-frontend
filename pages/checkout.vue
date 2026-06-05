@@ -135,9 +135,9 @@ const operatorOptions = computed(() =>
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" class="text-text-tertiary"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
         </div>
         <p class="text-lg font-medium text-text-primary mb-1">Votre panier est vide</p>
-        <p class="text-sm text-text-tertiary mb-5">Ajoutez des billets depuis un evenement.</p>
+        <p class="text-sm text-text-tertiary mb-5">Ajoutez des billets depuis un événement.</p>
         <NuxtLink to="/events" class="bg-orange-primary text-white px-5 py-2.5 rounded-lg text-sm font-medium no-underline hover:opacity-90 transition-opacity">
-          Parcourir les evenements
+          Parcourir les événements
         </NuxtLink>
       </div>
 
@@ -258,7 +258,7 @@ const operatorOptions = computed(() =>
           <!-- Section: Informations -->
           <div v-if="isFreeEvent" class="flex flex-col gap-4">
             <h2 class="text-lg font-semibold text-text-primary">Informations</h2>
-            <p class="text-sm text-text-secondary">{{ isInscription ? 'Inscription gratuite — confirmez votre participation ci-dessous.' : 'Cet evenement est gratuit. Confirmez votre inscription ci-dessous.' }}</p>
+            <p class="text-sm text-text-secondary">{{ isInscription ? 'Inscription gratuite — confirmez votre participation ci-dessous.' : 'Cet événement est gratuit. Confirmez votre inscription ci-dessous.' }}</p>
           </div>
 
           <!-- Récapitulatif inscription -->
@@ -320,7 +320,7 @@ const operatorOptions = computed(() =>
                   :model-value="selectedCountry"
                   label="Pays"
                   :options="countryOptions"
-                  placeholder="Selectionnez votre pays"
+                  placeholder="Sélectionnez votre pays"
                   :error="formErrors.country"
                   @update:model-value="selectedCountry = String($event)"
                 />
@@ -329,9 +329,9 @@ const operatorOptions = computed(() =>
                   <UiBaseSelect
                     v-if="selectedCountry && operatorOptions.length"
                     :model-value="selectedOperator"
-                    label="Operateur"
+                    label="Opérateur"
                     :options="operatorOptions"
-                    placeholder="Choisissez un operateur"
+                    placeholder="Choisissez un opérateur"
                     :error="formErrors.operator"
                     @update:model-value="selectedOperator = String($event)"
                   />
@@ -341,7 +341,7 @@ const operatorOptions = computed(() =>
                   <UiBaseInput
                     v-if="selectedOperator"
                     v-model="mobileNumber"
-                    label="Numero de telephone"
+                    label="Numéro de téléphone"
                     type="tel"
                     autocomplete="tel-national"
                     inputmode="tel"
@@ -358,14 +358,22 @@ const operatorOptions = computed(() =>
               <div v-if="paymentMode === 'card'" class="flex flex-col gap-4">
                 <div class="bg-gray-50 border border-gray-100 rounded-lg p-4">
                   <p class="text-sm text-text-secondary">
-                    Vous serez redirige vers la passerelle de paiement securisee pour finaliser votre achat.
+                    Vous serez redirigé vers la passerelle de paiement sécurisée pour finaliser votre achat.
                   </p>
                 </div>
               </div>
             </Transition>
           </template>
 
-          <!-- Action button -->
+          <!-- Politique de remboursement (transparence pré-paiement, exigence légale) -->
+          <div v-if="eventData?.refund_policy_label" class="bg-orange-dim/40 border border-orange-primary/30 rounded-lg px-4 py-3 mb-3 flex items-start gap-2.5">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-orange-primary shrink-0 mt-0.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <div class="flex-1 text-xs text-text-secondary leading-relaxed">
+              <strong class="text-text-primary">Politique de remboursement :</strong> {{ eventData.refund_policy_label }}
+            </div>
+          </div>
+
+          <!-- Action button (desktop : visible ici ; mobile : on garde + sticky en bas) -->
           <div class="flex flex-col gap-3">
             <UiBaseButton
               variant="primary"
@@ -379,16 +387,18 @@ const operatorOptions = computed(() =>
               <template v-else>Payer {{ formatPrice(totalTTC) }}</template>
             </UiBaseButton>
 
-            <p class="text-xs text-text-tertiary text-center">
-              Paiement securise — vos donnees sont protegees
-            </p>
+            <!-- Trust signals enrichis : icône cadenas + mention chiffrement -->
+            <div class="flex items-center justify-center gap-2 text-xs text-text-tertiary">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-green-dark"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <span>Paiement chiffré · Wave · Orange Money · Free Money · Carte bancaire</span>
+            </div>
           </div>
 
           <!-- Wizall confirmation -->
           <Transition name="fade-slide">
             <div v-if="paymentState === 'awaiting_confirmation'" class="bg-white rounded-xl p-5 flex flex-col gap-3">
               <p class="text-sm font-semibold text-text-primary">Confirmation Wizall</p>
-              <p class="text-sm text-text-tertiary">Entrez le code d'autorisation recu par SMS</p>
+              <p class="text-sm text-text-tertiary">Entrez le code d'autorisation reçu par SMS</p>
               <UiBaseInput
                 v-model="wizallCode"
                 placeholder="Code d'autorisation"
@@ -419,6 +429,33 @@ const operatorOptions = computed(() =>
             </div>
           </Transition>
         </div>
+      </div>
+    </div>
+
+    <!-- Sticky CTA mobile : "Payer X F CFA" toujours visible en bas
+         Évite le scroll de 3-4 swipes pour atteindre le bouton.
+         Hidden sur desktop (md+) car le CTA primaire est déjà dans le flow. -->
+    <div
+      v-if="!cartStore.isEmpty"
+      class="md:hidden fixed left-0 right-0 z-40 px-4 bg-white border-t border-border-light shadow-[0_-4px_16px_rgba(0,0,0,0.06)]"
+      :style="{ bottom: 0, paddingTop: '0.75rem', paddingBottom: 'calc(env(safe-area-inset-bottom) + 0.75rem)' }"
+    >
+      <div class="flex items-center justify-between gap-3">
+        <div class="flex-1 min-w-0">
+          <div class="text-[10px] uppercase tracking-wider text-text-tertiary font-semibold">Total</div>
+          <div class="font-serif text-lg text-text-primary leading-none">{{ formatPrice(totalTTC) }}</div>
+        </div>
+        <button
+          type="button"
+          :disabled="isProcessing"
+          class="inline-flex items-center justify-center px-6 py-3 rounded-full bg-orange-primary text-white text-sm font-bold hover:bg-orange-light transition-colors disabled:opacity-60 disabled:cursor-not-allowed shrink-0"
+          @click="pay"
+        >
+          <svg v-if="isProcessing" class="animate-spin mr-2 h-4 w-4" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" class="opacity-25"/><path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" class="opacity-75"/></svg>
+          <template v-if="isProcessing">Traitement…</template>
+          <template v-else-if="isFreeEvent">Confirmer</template>
+          <template v-else>Payer maintenant</template>
+        </button>
       </div>
     </div>
   </div>

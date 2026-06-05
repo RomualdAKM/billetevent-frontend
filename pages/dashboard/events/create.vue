@@ -168,9 +168,13 @@ const artists = ref<{ id?: number; name: string; role: string; image: File | nul
   { name: '', role: '', image: null, preview: '' },
   { name: '', role: '', image: null, preview: '' }
 ])
+// IMPORTANT : NE PAS pré-remplir d'engagement contractuel (remboursement,
+// transfert, etc.) — chaque organisateur configure sa propre refund_policy
+// dans l'étape billetterie. Pré-remplir "remboursement 14 jours" ici crée
+// un engagement potentiellement faux si l'organisateur publie sans relire.
+// Le placeholder neutre invite l'organisateur à saisir ses propres FAQs.
 const faqItems = ref<{ id?: number; q: string; a: string }[]>([
-  { q: 'Mon billet est-il remboursable ?', a: 'Oui, remboursement intégral possible jusqu\'à 14 jours avant l\'événement.' },
-  { q: 'Comment recevoir mon billet ?', a: 'Votre billet arrive par email dès l\'achat confirmé. Le QR code est valable depuis votre téléphone.' }
+  { q: '', a: '' },
 ])
 const sectionStates = ref<Record<string, boolean>>({ prog: true, artists: true, faq: true, acces: true })
 const transportOptions = ref([
@@ -282,6 +286,40 @@ function onCategoryChange(e: Event) {
   showCatCustom.value = (e.target as HTMLSelectElement).value === 'autre'
 }
 const showPublishModal = ref(false)
+
+// Kit marketing post-publication (modal qui s'affiche après publish réussi)
+const showPostPublishKit = ref(false)
+const publishedEventUrl = ref('')
+const publishedEventTitle = ref('')
+const kitLinkCopied = ref(false)
+
+async function kitCopyLink() {
+  try {
+    await navigator.clipboard.writeText(publishedEventUrl.value)
+    kitLinkCopied.value = true
+    setTimeout(() => { kitLinkCopied.value = false }, 2500)
+  } catch {
+    notifyError('Copie impossible')
+  }
+}
+
+function kitShareWhatsApp() {
+  const msg = encodeURIComponent(
+    `🎟️ ${publishedEventTitle.value}\n\nJe vous invite à mon événement. Réservez votre billet ici :\n${publishedEventUrl.value}`
+  )
+  window.open(`https://wa.me/?text=${msg}`, '_blank')
+}
+
+function kitShareEmail() {
+  const subject = encodeURIComponent(publishedEventTitle.value)
+  const body = encodeURIComponent(`Bonjour,\n\nJe vous invite à mon événement « ${publishedEventTitle.value} ».\n\nLien de réservation : ${publishedEventUrl.value}\n\nÀ bientôt !`)
+  window.open(`mailto:?subject=${subject}&body=${body}`, '_blank')
+}
+
+function kitGoToEvents() {
+  showPostPublishKit.value = false
+  navigateTo('/dashboard/events')
+}
 
 const buildFormData = () => {
   const fd = new FormData()
@@ -591,13 +629,28 @@ const saveOrPublish = async (publish: boolean) => {
     if (publish) {
       draftStatus.value = 'En ligne'
       success('Événement publié avec succès !')
+      // Persisted successfully — drop the unsaved-changes guard
+      isDirty.value = false
+      // Construire le lien public — soit /e/[slug] (landing marketing)
+      // soit /events/[slug] en fallback.
+      const slugForLink = created?.slug || createdId
+      if (slugForLink) {
+        const requestUrl = useRequestURL()
+        publishedEventUrl.value = `${requestUrl.origin}/e/${slugForLink}`
+        publishedEventTitle.value = eventTitle.value
+        showPostPublishKit.value = true
+        // Pas de navigation immédiate — l'utilisateur ferme le modal puis
+        // peut soit aller à la liste, soit gérer plus tard.
+        return
+      }
+      // Pas de slug récupéré → fallback ancien comportement
+      setTimeout(() => navigateTo('/dashboard/events'), 600)
     } else {
       draftStatus.value = 'Brouillon sauvegardé'
       success('Brouillon sauvegardé')
+      isDirty.value = false
+      setTimeout(() => navigateTo('/dashboard/events'), 600)
     }
-    // Persisted successfully — drop the unsaved-changes guard before navigating
-    isDirty.value = false
-    setTimeout(() => navigateTo('/dashboard/events'), 600)
   } catch (err: any) {
     if (err?.status === 422 && err?.errors) {
       fieldErrors.value = err.errors
@@ -698,7 +751,12 @@ const loadEditEvent = async () => {
       if (Array.isArray(artistData) && artistData.length) {
         artists.value = artistData.map((a: any) => ({
           id: a.id, name: a.name, role: a.role || '',
-          image: null, preview: a.image_path ? `/storage/${a.image_path}` : ''
+          // Defensive: backend may return raw path OR absolute URL.
+          // If it already starts with http(s), don't prefix /storage/.
+          image: null,
+          preview: a.image_path
+            ? (/^https?:\/\//i.test(a.image_path) ? a.image_path : `/storage/${a.image_path}`)
+            : ''
         }))
         sectionStates.value.artists = true
       }
@@ -1056,6 +1114,72 @@ const finputClass = 'py-2.5 px-3.5 rounded-lg border-[1.5px] border-border-light
       @confirm="confirmPublish"
       @cancel="showPublishModal = false"
     />
+
+    <!-- Kit marketing post-publication.
+         Évite le toast → silence. Propose 3 actions de partage immédiates :
+         WhatsApp (canal n°1 en Afrique de l'Ouest), copier le lien (Instagram bio
+         ou diffusion), email (bases existantes). + bouton "Plus tard" qui mène à la liste. -->
+    <UiBaseModal :is-open="showPostPublishKit" title="Votre événement est en ligne 🎉" size="md" @close="kitGoToEvents">
+      <div class="text-center mb-5">
+        <div class="w-14 h-14 rounded-full bg-green-dim flex items-center justify-center mx-auto mb-3">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--color-green-dark)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <h3 class="font-serif text-lg text-text-primary mb-1">Maintenant, faisons-le décoller</h3>
+        <p class="text-sm text-text-secondary">Partagez votre événement dans les 24h — c'est là que vous récoltez le maximum d'inscriptions.</p>
+      </div>
+
+      <div class="bg-surface-2 rounded-lg px-3 py-2.5 mb-4 flex items-center gap-2">
+        <span class="text-xs text-text-tertiary font-mono flex-1 truncate min-w-0">{{ publishedEventUrl }}</span>
+        <button
+          type="button"
+          class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-white border border-border-light hover:border-orange-primary hover:text-orange-primary transition-colors"
+          :class="kitLinkCopied ? 'text-green-dark border-green-dark' : 'text-text-secondary'"
+          @click="kitCopyLink"
+        >
+          <svg v-if="!kitLinkCopied" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          <svg v-else width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+          {{ kitLinkCopied ? 'Copié' : 'Copier le lien' }}
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+        <button
+          type="button"
+          class="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-bold text-white bg-[#25D366] hover:bg-[#20BD5A] transition-colors"
+          @click="kitShareWhatsApp"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/></svg>
+          Partager sur WhatsApp
+        </button>
+        <button
+          type="button"
+          class="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-semibold text-text-primary bg-surface-2 hover:bg-surface-3 transition-colors"
+          @click="kitShareEmail"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="22 7 12 14 2 7"/></svg>
+          Inviter par email
+        </button>
+      </div>
+
+      <template #footer>
+        <div class="flex items-center justify-between gap-2 w-full">
+          <NuxtLink
+            :to="publishedEventUrl"
+            target="_blank"
+            class="text-xs text-text-tertiary hover:text-orange-primary"
+          >
+            👁 Voir la page publique
+          </NuxtLink>
+          <button
+            type="button"
+            class="px-4 py-2 rounded-lg text-sm font-semibold text-text-secondary bg-surface-2 hover:bg-surface-3 transition-colors"
+            @click="kitGoToEvents"
+          >
+            Aller à mes événements →
+          </button>
+        </div>
+      </template>
+    </UiBaseModal>
   </div>
 </template>
 

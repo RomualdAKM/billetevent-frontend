@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 const props = defineProps({
   title: { type: String, required: true },
   date: { type: String, required: true },
@@ -26,7 +26,17 @@ const toggleFavorite = () => {
 const { toggleFollowOrganizer } = usePublicApi()
 const { success, error: notifyError } = useNotification()
 const authStore = useAuthStore()
-const isFollowing = ref(false)
+
+// Initial state MUST come from the server-provided flag (EventResource exposes
+// `organizer.is_following`) — otherwise the button shows "S'abonner" for orgs
+// the user already follows, and the first click silently UNFOLLOWS them.
+const isFollowing = ref(!!props.event?.organizer?.is_following)
+
+// Keep ref in sync if the event prop changes (e.g. parent re-fetches).
+watch(() => props.event?.organizer?.is_following, (val) => {
+  isFollowing.value = !!val
+})
+
 const followLoading = ref(false)
 const followOrganizer = async () => {
   if (!organizer.value?.id) return
@@ -37,8 +47,18 @@ const followOrganizer = async () => {
   if (followLoading.value) return
   followLoading.value = true
   try {
-    const res = await toggleFollowOrganizer(organizer.value.id)
-    isFollowing.value = !!(res?.is_following ?? res?.data?.is_following ?? !isFollowing.value)
+    const res: any = await toggleFollowOrganizer(organizer.value.id)
+    // Backend (PublicOrganizerController::toggleFollow) returns `{following: bool}`.
+    // We also accept `is_following` for future-proofing, and fall back to a
+    // local toggle ONLY if neither field is present (defensive — should not
+    // happen with the current backend contract).
+    const next =
+      typeof res?.following === 'boolean' ? res.following
+      : typeof res?.data?.following === 'boolean' ? res.data.following
+      : typeof res?.is_following === 'boolean' ? res.is_following
+      : typeof res?.data?.is_following === 'boolean' ? res.data.is_following
+      : !isFollowing.value
+    isFollowing.value = !!next
     success(isFollowing.value ? 'Abonné' : 'Désabonné')
   } catch {
     notifyError('Impossible de mettre à jour l\'abonnement')

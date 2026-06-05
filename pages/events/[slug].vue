@@ -2,7 +2,7 @@
 definePageMeta({ layout: 'event' })
 
 const route = useRoute()
-const { getEvent } = useEventsApi()
+const { getEvent, getEvents } = useEventsApi()
 const { getOrganizerEvents } = usePublicApi()
 const authStore = useAuthStore()
 const cartStore = useCartStore()
@@ -73,10 +73,16 @@ function lightboxNext() {
   lightboxIndex.value = (lightboxIndex.value + 1) % gallery.length
 }
 
+// Generic, non-policy-binding FAQs used as a fallback when the organiser
+// has not configured any. CRITICAL : NE PAS inclure de promesse de
+// remboursement / transfert ici — ces règles dépendent du `refund_policy`
+// configuré par chaque organisateur et sont déjà affichées par ailleurs
+// (page billetterie + page checkout). Mettre des promesses ici crée des
+// engagements contractuels potentiellement faux.
 const defaultFaqs = [
-  { q: 'Mon billet est-il remboursable ?', a: 'Oui, un remboursement intégral est possible jusqu\'à 14 jours avant l\'événement depuis votre compte.', open: true },
-  { q: 'Comment est-ce que je reçois mon billet ?', a: 'Votre billet est envoyé par email dès la confirmation de l\'achat. Le QR code fonctionne directement depuis votre téléphone à l\'entrée.', open: false },
-  { q: 'Puis-je transférer mon billet à quelqu\'un d\'autre ?', a: 'Oui, gratuitement jusqu\'à 48h avant l\'événement depuis votre compte BilletEvent.', open: false }
+  { q: 'Comment est-ce que je reçois mon billet ?', a: 'Votre billet est envoyé par email dès la confirmation de l\'achat. Le QR code fonctionne directement depuis votre téléphone à l\'entrée de l\'événement.', open: true },
+  { q: 'Que faire si je n\'ai pas reçu mon billet ?', a: 'Vérifiez vos spams. Sinon, connectez-vous à votre compte BilletEvent (rubrique "Mes billets") pour le télécharger à nouveau, ou contactez le support.', open: false },
+  { q: 'Le QR code de mon billet fonctionne-t-il hors-ligne ?', a: 'Oui. Téléchargez votre billet en PDF depuis votre espace ou faites une capture d\'écran — le QR code reste valable sans connexion à l\'entrée.', open: false },
 ]
 
 const faqItems = ref<Array<{ q: string; a: string; open: boolean }>>([])
@@ -135,6 +141,9 @@ const artists = computed(() => {
 })
 
 const orgEvents = ref<any[]>([])
+// "Vous aimerez aussi" — events similaires (même catégorie OU même ville,
+// excluant l'event actuel ET ceux du même organisateur déjà listés).
+const similarEvents = ref<any[]>([])
 
 watch(event, async (ev) => {
   if (ev?.organizer?.id) {
@@ -154,6 +163,34 @@ watch(event, async (ev) => {
         }))
     } catch (err) {
       console.error('Error loading organizer events:', err)
+    }
+  }
+
+  // Charger des "events similaires" (même catégorie OU même ville) en
+  // excluant l'event actuel + ceux du même organisateur déjà listés.
+  if (ev?.id) {
+    try {
+      const params: Record<string, any> = { per_page: 8 }
+      if (ev.category) params.category = ev.category
+      // On préfère même ville si dispo, sinon on tombera sur same-category
+      if (ev.city) params.city = ev.city
+      const res: any = await getEvents(params)
+      const list = res?.data ?? []
+      const excludeIds = new Set<number | string>([ev.id, ...orgEvents.value.map(o => o.id)])
+      similarEvents.value = list
+        .filter((e: any) => !excludeIds.has(e.id))
+        .slice(0, 3)
+        .map((e: any) => ({
+          id: e.id,
+          slug: e.slug || e.id,
+          title: e.title,
+          location: [e.city, e.country].filter(Boolean).join(', '),
+          date: e.date_start,
+          image: e.flyer_url,
+          minPrice: e.min_price,
+        }))
+    } catch {
+      // Non bloquant — on ne notifie pas, c'est juste une suggestion bonus
     }
   }
 }, { immediate: true })
@@ -250,18 +287,44 @@ function copyLocation() {
 const ticketCategories = computed(() => {
   const passes = event.value?.passes ?? []
   const formatDate = (d: string) => d ? new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : ''
-  return passes.map((p: any) => ({
-    id: p.id,
-    name: p.name,
-    description: p.description || '',
-    price: p.price,
-    quantity: ticketQuantities.value[p.id] ?? 0,
-    remaining: p.available ?? (p.capacity - p.sold_count),
-    badge: '',
-    badgeType: (p.available ?? (p.capacity - p.sold_count)) < 20 ? 'limited' : 'normal',
-    saleStart: formatDate(p.sale_start_date),
-    saleEnd: formatDate(p.sale_end_date),
-  }))
+  const nowMs = Date.now()
+  return passes.map((p: any) => {
+    const remaining = p.available ?? Math.max(0, (p.capacity ?? 0) - (p.sold_count ?? 0))
+    const startMs = p.sale_start_date ? new Date(p.sale_start_date).getTime() : null
+    const endMs = p.sale_end_date ? new Date(p.sale_end_date).getTime() : null
+    const isNotYetOnSale = startMs !== null && startMs > nowMs
+    const isSaleEnded = endMs !== null && endMs < nowMs
+    const isSoldOut = remaining <= 0
+    const isOnSale = !isNotYetOnSale && !isSaleEnded && !isSoldOut
+    return {
+      id: p.id,
+      name: p.name,
+      description: p.description || '',
+      price: p.price,
+      // Honour the pass's own max_per_order (saisi côté organisateur).
+      // Defaults to 10 only if the backend somehow omitted it.
+      maxPerOrder: typeof p.max_per_order === 'number' ? p.max_per_order : 10,
+      quantity: ticketQuantities.value[p.id] ?? 0,
+      remaining,
+      isSoldOut,
+      isNotYetOnSale,
+      isSaleEnded,
+      isOnSale,
+      badge: '',
+      badgeType: remaining > 0 && remaining < 20 ? 'limited' : 'normal',
+      saleStart: formatDate(p.sale_start_date),
+      saleEnd: formatDate(p.sale_end_date),
+    }
+  })
+})
+
+// Past-event gate: hide ticketing if date_start is in the past (backend
+// also blocks it via CheckoutController, but the front must not even offer
+// the option). Also exposed to the template for an explicit message.
+const isPastEvent = computed(() => {
+  const start = event.value?.date_start
+  if (!start) return false
+  return new Date(start).getTime() < Date.now()
 })
 
 const ticketQuantities = ref<Record<number | string, number>>({})
@@ -319,8 +382,12 @@ function decreaseQty(ticket: any) {
   }
 }
 function increaseQty(ticket: any) {
+  // Bloque tout incrément si le pass n'est pas en vente (sold out / pas
+  // encore en vente / vente terminée / event passé).
+  if (!ticket.isOnSale || isPastEvent.value) return
   const current = ticketQuantities.value[ticket.id] ?? 0
-  const maxPerOrder = 10
+  // Use the pass's own max_per_order, not a hard-coded 10
+  const maxPerOrder = typeof ticket.maxPerOrder === 'number' ? ticket.maxPerOrder : 10
   const stockCap = typeof ticket.remaining === 'number' ? ticket.remaining : Number.POSITIVE_INFINITY
   if (current < maxPerOrder && current < stockCap) {
     ticketQuantities.value[ticket.id] = current + 1
@@ -730,7 +797,15 @@ watchEffect(() => {
           </div>
           <div class="h-px bg-border-light"></div>
 
-          <div v-if="event?.is_invitation_only" class="px-5 py-8 text-center">
+          <div v-if="isPastEvent" class="px-5 py-8 text-center">
+            <div class="w-12 h-12 rounded-full bg-surface-2 flex items-center justify-center mx-auto mb-3">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-text-tertiary"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <div class="text-base font-bold text-text-primary mb-1">Événement terminé</div>
+            <div class="text-sm text-text-tertiary">Cet événement est passé. La billetterie est fermée.</div>
+          </div>
+
+          <div v-else-if="event?.is_private" class="px-5 py-8 text-center">
             <div class="w-12 h-12 rounded-full bg-purple/10 flex items-center justify-center mx-auto mb-3">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-purple"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
             </div>
@@ -743,25 +818,29 @@ watchEffect(() => {
           <div v-for="ticket in ticketCategories" :key="ticket.id" class="px-5 py-4 border-b border-border-light last:border-b-0">
             <div class="flex items-start justify-between gap-3 mb-2">
               <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2 mb-1">
+                <div class="flex items-center gap-2 mb-1 flex-wrap">
                   <span class="text-sm font-bold text-text-primary">{{ ticket.name }}</span>
-                  <span v-if="ticket.badgeType === 'limited'" class="text-xs font-medium text-text-tertiary">
+                  <span v-if="ticket.isSoldOut" class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-red-dim text-red-error">Épuisé</span>
+                  <span v-else-if="ticket.isNotYetOnSale" class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-orange-dim text-orange-primary">Bientôt en vente</span>
+                  <span v-else-if="ticket.isSaleEnded" class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-surface-2 text-text-tertiary">Vente terminée</span>
+                  <span v-else-if="ticket.badgeType === 'limited'" class="text-xs font-medium text-text-tertiary">
                     {{ ticket.remaining }} restants
                   </span>
                 </div>
                 <div v-if="ticket.description" class="text-xs text-text-tertiary mb-1 line-clamp-2">{{ ticket.description }}</div>
                 <div class="font-serif text-[1.05rem] text-text-primary">{{ formatPrice(ticket.price) }}</div>
-                <div class="text-xs text-text-tertiary">{{ ticket.remaining }} restant{{ ticket.remaining > 1 ? 's' : '' }}</div>
-                <div v-if="ticket.saleStart || ticket.saleEnd" class="text-xs text-text-tertiary mt-1">
-                  <span v-if="ticket.saleStart">Vente à partir du {{ ticket.saleStart }}</span>
-                  <span v-if="ticket.saleStart && ticket.saleEnd"> — </span>
-                  <span v-if="ticket.saleEnd">Jusqu'au {{ ticket.saleEnd }}</span>
+                <div v-if="!ticket.isSoldOut" class="text-xs text-text-tertiary">{{ ticket.remaining }} restant{{ ticket.remaining > 1 ? 's' : '' }}</div>
+                <div v-if="ticket.isNotYetOnSale && ticket.saleStart" class="text-xs text-orange-primary font-semibold mt-1">
+                  Mise en vente le {{ ticket.saleStart }}
+                </div>
+                <div v-else-if="ticket.saleEnd" class="text-xs text-text-tertiary mt-1">
+                  Vente jusqu'au {{ ticket.saleEnd }}
                 </div>
               </div>
               <div class="flex items-center gap-2 shrink-0">
-                <button type="button" aria-label="Diminuer la quantité" class="w-11 h-11 rounded-lg border border-border-light bg-bg-primary flex items-center justify-center cursor-pointer transition-colors font-sans text-lg text-text-secondary hover:border-orange-primary hover:text-orange-primary disabled:opacity-30 disabled:cursor-not-allowed" :disabled="ticket.quantity === 0" @click="decreaseQty(ticket)">−</button>
+                <button type="button" aria-label="Diminuer la quantité" class="w-11 h-11 rounded-lg border border-border-light bg-bg-primary flex items-center justify-center cursor-pointer transition-colors font-sans text-lg text-text-secondary hover:border-orange-primary hover:text-orange-primary disabled:opacity-30 disabled:cursor-not-allowed" :disabled="ticket.quantity === 0 || !ticket.isOnSale" @click="decreaseQty(ticket)">−</button>
                 <span class="w-9 text-center font-bold text-base text-text-primary tabular-nums" aria-live="polite">{{ ticket.quantity }}</span>
-                <button type="button" aria-label="Augmenter la quantité" class="w-11 h-11 rounded-lg border border-border-light bg-bg-primary flex items-center justify-center cursor-pointer transition-colors font-sans text-lg text-text-secondary hover:border-orange-primary hover:text-orange-primary disabled:opacity-30 disabled:cursor-not-allowed" :disabled="ticket.quantity >= 10" @click="increaseQty(ticket)">+</button>
+                <button type="button" aria-label="Augmenter la quantité" class="w-11 h-11 rounded-lg border border-border-light bg-bg-primary flex items-center justify-center cursor-pointer transition-colors font-sans text-lg text-text-secondary hover:border-orange-primary hover:text-orange-primary disabled:opacity-30 disabled:cursor-not-allowed" :disabled="!ticket.isOnSale || ticket.quantity >= ticket.maxPerOrder || ticket.quantity >= ticket.remaining" @click="increaseQty(ticket)">+</button>
               </div>
             </div>
           </div>
@@ -960,6 +1039,42 @@ watchEffect(() => {
       </div>
     </section>
 
+    <!-- "Vous aimerez aussi" : events de même catégorie ou même ville -->
+    <section v-if="similarEvents.length > 0" class="bg-white py-12 px-10 border-t border-border-light max-md:py-9 max-md:px-6 max-sm:px-4">
+      <div class="max-w-[1100px] mx-auto">
+        <div class="flex items-end justify-between mb-6 flex-wrap gap-3">
+          <div>
+            <div class="text-[0.7rem] font-bold tracking-[0.12em] uppercase text-orange-primary mb-2">Vous aimerez aussi</div>
+            <h2 class="font-serif text-xl text-text-primary">Découvrez d'autres événements similaires</h2>
+          </div>
+          <NuxtLink to="/events" class="text-sm font-bold text-orange-primary hover:underline shrink-0">
+            Voir tout →
+          </NuxtLink>
+        </div>
+        <div class="grid grid-cols-3 gap-5 max-md:grid-cols-1 max-md:gap-4">
+          <NuxtLink v-for="evt in similarEvents" :key="evt.id" :to="`/events/${evt.slug || evt.id}`" class="bg-bg-primary border border-border-light rounded-xl overflow-hidden flex flex-col transition-all duration-200 cursor-pointer no-underline hover:border-orange-primary">
+            <div class="h-[120px] relative overflow-hidden shrink-0 bg-bg-secondary">
+              <NuxtImg v-if="evt.image" :src="evt.image" :alt="evt.title" class="w-full h-full object-cover" loading="lazy" :placeholder="[20, 20]" />
+              <div v-else class="w-full h-full flex items-center justify-center">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-text-tertiary"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              </div>
+            </div>
+            <div class="p-4 flex flex-col gap-2 flex-1">
+              <div class="text-sm font-semibold text-text-primary leading-snug line-clamp-2">{{ evt.title }}</div>
+              <div v-if="evt.location" class="flex items-center gap-1 text-xs text-text-tertiary">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                {{ evt.location }}
+              </div>
+              <div class="flex items-center justify-between mt-auto pt-2 border-t border-border-light">
+                <span class="text-xs font-bold text-text-primary">{{ evt.date ? new Date(evt.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : '' }}</span>
+                <span class="text-xs font-bold text-orange-primary">{{ evt.minPrice === 0 ? 'Gratuit' : (evt.minPrice ? formatPrice(evt.minPrice) : '') }}</span>
+              </div>
+            </div>
+          </NuxtLink>
+        </div>
+      </div>
+    </section>
+
     <footer class="bg-white border-t border-border-light py-8 px-5 text-center">
       <p class="text-sm text-gray-500 mb-1">{{ event?.organizer?.display_name || event?.organizer?.name || '' }} &copy; {{ new Date().getFullYear() }} All rights reserved.</p>
       <p class="text-xs text-gray-400">Powered by <a href="https://billetevent.com" target="_blank" rel="noopener" class="text-gray-500 hover:text-gray-700 transition-colors no-underline font-medium">BilletEvent</a></p>
@@ -982,7 +1097,7 @@ watchEffect(() => {
 
     <!-- Bouton flottant Acheter un billet -->
     <a
-      v-if="event && !event.is_invitation_only && !isLibre && totalQuantity === 0"
+      v-if="event && !event.is_private && !isLibre && totalQuantity === 0"
       href="#billets"
       class="fixed bottom-6 right-6 z-[150] px-5 py-3 rounded-full text-sm font-semibold bg-orange-primary text-white hover:bg-orange-light transition-all flex items-center gap-2 animate-fade-in-up"
       @click.prevent="scrollToBillets"

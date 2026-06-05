@@ -38,15 +38,15 @@ export default defineNuxtRouteMiddleware(async (to) => {
     return
   }
 
-  // Tenter de devenir organisateur
-  try {
-    const { becomeOrganizer } = useAuthApi()
-    const response = await becomeOrganizer()
-    const userData = response?.data?.user ?? response?.user
-    if (userData) {
-      authStore.setUser(userData)
-    }
-  } catch {
-    return navigateTo('/account')
+  // RGPD / UX fix : ne plus élever silencieusement le buyer en organizer.
+  // L'élévation silencieuse changeait le rôle (avec CGU différentes) sans
+  // consentement explicite. On envoie l'utilisateur vers une page dédiée
+  // /dashboard/devenir-organisateur où il accepte explicitement les CGU
+  // organisateur avant d'être élevé.
+  if (to.path !== '/dashboard/devenir-organisateur') {
+    return navigateTo({
+      path: '/dashboard/devenir-organisateur',
+      query: { redirect: to.fullPath },
+    })
   }
 })

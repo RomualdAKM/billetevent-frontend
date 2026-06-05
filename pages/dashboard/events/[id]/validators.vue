@@ -187,7 +187,13 @@ const actionLoading = ref(false)
 const eventName = ref('')
 const accessCode = ref('')
 const accessLink = ref('')
-const validationLink = computed(() => accessLink.value || `${window.location.origin}/validator/login/EVT-${eventId}`)
+
+// SSR-safe origin: useRequestURL() works on both server and client. The
+// fallback URL is only used until the API returns the canonical accessLink.
+// Previously this read window.location.origin directly, which crashed during
+// Nuxt's SSR render of the dashboard page.
+const requestUrl = useRequestURL()
+const validationLink = computed(() => accessLink.value || `${requestUrl.origin}/validator/login/EVT-${eventId}`)
 const regenModalOpen = ref(false)
 
 const scanStats = ref({ scanned: 0, valid: 0, invalid: 0, duplicates: 0 })
@@ -269,5 +275,24 @@ const confirmRegen = async () => {
   }
 }
 
-onMounted(() => loadValidatorData())
+// Polling stats toutes les 10s : pendant l'événement, l'organisateur veut
+// voir les entrées/scans en quasi-temps réel sans avoir à F5.
+let statsPollInterval: ReturnType<typeof setInterval> | null = null
+
+onMounted(() => {
+  loadValidatorData()
+  if (import.meta.client) {
+    statsPollInterval = setInterval(() => {
+      // Pas de loading state pendant les polls — on rafraîchit silencieusement
+      loadValidatorData()
+    }, 10000)
+  }
+})
+
+onBeforeUnmount(() => {
+  if (statsPollInterval) {
+    clearInterval(statsPollInterval)
+    statsPollInterval = null
+  }
+})
 </script>
