@@ -21,6 +21,7 @@ export default defineNuxtConfig({
     families: [
       { name: 'DM Sans', provider: 'google', weights: [300, 400, 500, 600, 700] },
       { name: 'DM Serif Display', provider: 'google', weights: [400] },
+      { name: 'JetBrains Mono', provider: 'google', weights: [400, 500, 600, 700] },
     ],
   },
   image: {

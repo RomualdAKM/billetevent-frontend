@@ -12,10 +12,16 @@
   /* --- Typography ----------------------------------------- */
   --font-sans: 'DM Sans', system-ui, sans-serif;
   --font-serif: 'DM Serif Display', Georgia, serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
   /* --- Backgrounds --------------------------------------- */
   --color-bg-primary: #F4F6FA;
   --color-bg-tickets: #F0F2F8;
+
+  /* --- Direction A : Billet IRL -------------------------- */
+  --color-kraft: #F6F1E8;
+  --color-paper: #FFFEF9;
+  --color-ink: #1A1A1A;
 
   /* --- Surfaces ------------------------------------------ */
   --color-surface: #FFFFFF;

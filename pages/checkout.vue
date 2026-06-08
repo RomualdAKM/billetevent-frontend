@@ -107,10 +107,52 @@ const countryOptions = computed(() =>
 const operatorOptions = computed(() =>
   countryOperators.value.map((op: any) => ({ label: op.name || op, value: op.key || op }))
 )
+
+// ── Billet IRL : reference de souche + horodatage ──
+// Hash deterministe de l'eventId pour generer un suffixe 4 chiffres stable
+// (la souche d'une meme commande/event garde toujours la meme reference).
+function hashEventId(id: string | number | null | undefined): string {
+  const src = id != null ? String(id) : 'anon'
+  let h = 0
+  for (let i = 0; i < src.length; i++) {
+    h = ((h << 5) - h + src.charCodeAt(i)) | 0
+  }
+  const n = Math.abs(h) % 10000
+  return n.toString().padStart(4, '0')
+}
+
+const orderRef = computed(() => {
+  // Code pays ISO depuis eventData.country (fallback "BE")
+  const rawCountry: any = (eventData.value as any)?.country
+  let countryCode = 'BE'
+  if (rawCountry) {
+    if (typeof rawCountry === 'string') {
+      countryCode = rawCountry.slice(0, 2).toUpperCase()
+    } else if (typeof rawCountry === 'object') {
+      countryCode = String(rawCountry.code || rawCountry.iso || rawCountry.iso_code || 'BE').slice(0, 2).toUpperCase()
+    }
+  }
+  const year = new Date().getFullYear()
+  // Type du premier item : VIP si l'intitule contient "vip", sinon STD
+  const firstItem: any = items.value?.[0]
+  const itemName: string = (firstItem?.name || '').toString().toLowerCase()
+  const itemType = itemName.includes('vip') ? 'VIP' : 'STD'
+  const suffix = hashEventId(eventId.value)
+  return `${countryCode}-${year}-${itemType}-${suffix}`
+})
+
+// Horodatage cote client uniquement pour eviter le mismatch SSR/CSR.
+// Format "08.06.2026 14h32".
+const issuedAt = ref('')
+onMounted(() => {
+  const d = new Date()
+  const pad = (n: number) => n.toString().padStart(2, '0')
+  issuedAt.value = `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}h${pad(d.getMinutes())}`
+})
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#F4F6FA]">
+  <div class="min-h-screen bg-kraft">
     <div class="max-w-[1040px] mx-auto px-6 py-10 max-sm:px-4 max-sm:py-6">
       <!-- Back link -->
       <NuxtLink
@@ -147,76 +189,121 @@ const operatorOptions = computed(() =>
         </NuxtLink>
       </div>
 
-      <!-- Checkout grid: form left, summary right (reversed on mobile) -->
-      <div v-else class="grid grid-cols-1 md:grid-cols-[1fr_380px] gap-8 items-start">
+      <!-- Checkout : billet IRL (souche + form), Direction A -->
+      <div v-else class="max-w-[1040px] mx-auto my-8 bg-paper border-2 border-ink">
+        <!-- Header band : entete de souche -->
+        <div class="border-b border-ink/30 px-6 md:px-8 py-3 flex items-center justify-between font-mono text-[0.7rem] text-ink uppercase tracking-tight flex-wrap gap-2">
+          <span>BILLETEVENT // SOUCHE D ACHAT</span>
+          <span>REF {{ orderRef }} . EMIS LE {{ issuedAt }}</span>
+        </div>
 
-        <!-- Summary (appears first on mobile) -->
-        <div class="order-first md:order-last md:sticky md:top-8">
-          <div class="bg-white rounded-xl p-6">
-            <h2 class="text-lg font-semibold text-text-primary mb-4">Recapitulatif</h2>
+        <!-- Grid : form + souche separes par une perforation verticale (md+) ou horizontale (mobile) -->
+        <div class="grid grid-cols-1 md:grid-cols-[1.1fr_1fr] divide-y-2 md:divide-y-0 md:divide-x-2 divide-dashed divide-ink/40">
 
-            <p class="font-medium text-text-primary mb-1">{{ eventName }}</p>
-            <div v-if="eventDate" class="text-sm text-text-tertiary mb-0.5">{{ eventDate }}</div>
-            <div v-if="eventLocation" class="text-sm text-text-tertiary mb-4">{{ eventLocation }}</div>
+        <!-- Summary / souche (appears first on mobile, sticky top mobile, static desktop) -->
+        <div class="bg-paper p-6 md:p-8 order-1 md:order-2 md:static sticky top-0 z-20">
+          <!-- Header souche : titre event + date/lieu -->
+          <h2 class="font-serif text-xl md:text-2xl text-ink mb-1">{{ eventName }}</h2>
+          <div class="font-mono text-xs text-ink/70 uppercase leading-relaxed">
+            <div v-if="eventDate">{{ eventDate }}</div>
+            <div v-if="eventLocation">{{ eventLocation }}</div>
+          </div>
 
-            <div class="h-px bg-gray-100 my-4" />
+          <div class="border-b border-dashed border-ink/40 my-4"></div>
 
-            <!-- Items -->
-            <div v-for="item in items" :key="item.name" class="flex justify-between py-1.5 text-sm">
-              <span class="text-text-secondary">{{ item.name }} x {{ item.quantity }}</span>
-              <span class="text-text-primary font-medium">{{ formatPrice(item.price * item.quantity) }}</span>
+          <!-- Items : liste monospace -->
+          <div class="space-y-1.5 font-mono text-sm py-1">
+            <div
+              v-for="item in items"
+              :key="item.name"
+              class="flex justify-between items-baseline"
+            >
+              <span class="text-ink">{{ item.quantity }}x&nbsp;&nbsp;{{ item.name }}</span>
+              <span class="text-ink tabular-nums">{{ formatPrice(item.price * item.quantity) }}</span>
             </div>
 
-            <div class="h-px bg-gray-100 my-4" />
-
-            <!-- Totals -->
-            <div class="flex justify-between py-1 text-sm">
-              <span class="text-text-secondary">Sous-total</span>
-              <span class="text-text-primary">{{ formatPrice(subtotal) }}</span>
-            </div>
-            <div v-if="serviceFee > 0" class="flex justify-between py-1 text-sm">
-              <span class="text-text-secondary">Frais de service</span>
-              <span class="text-text-primary">{{ formatPrice(serviceFee) }}</span>
-            </div>
-            <div v-if="promoDiscount > 0" class="flex justify-between py-1 text-sm">
-              <span class="text-green-600">Reduction promo</span>
-              <span class="text-green-600 font-medium">-{{ formatPrice(promoDiscount) }}</span>
+            <!-- Frais de service -->
+            <div v-if="serviceFee > 0" class="flex justify-between items-baseline">
+              <span class="text-ink">Frais de service</span>
+              <span class="text-ink tabular-nums">{{ formatPrice(serviceFee) }}</span>
             </div>
 
-            <div class="h-px bg-gray-100 my-4" />
-
-            <div class="flex justify-between items-center">
-              <span class="text-base font-semibold text-text-primary">Total</span>
-              <span class="text-xl font-bold text-text-primary">{{ formatPrice(totalTTC) }}</span>
+            <!-- Reduction promo -->
+            <div v-if="promoDiscount > 0" class="flex justify-between items-baseline">
+              <span class="text-orange-primary">Reduction promo</span>
+              <span class="text-orange-primary tabular-nums">-{{ formatPrice(promoDiscount) }}</span>
             </div>
+          </div>
 
-            <!-- Promo code -->
-            <div class="mt-5">
-              <div v-if="!promoApplied" class="flex gap-2">
-                <UiBaseInput
-                  v-model="promoInput"
-                  placeholder="Code promo"
-                  class="flex-1"
-                />
-                <UiBaseButton
-                  variant="secondary"
-                  size="md"
-                  :loading="promoLoading"
-                  :disabled="!promoInput.trim()"
-                  @click="applyPromo"
-                >
-                  Appliquer
-                </UiBaseButton>
-              </div>
-              <p v-else class="text-sm text-green-600 font-medium">
-                Code applique : {{ cartStore.promoCode }}
-              </p>
+          <!-- Separateur double ligne avant total -->
+          <div class="border-t-2 border-ink my-4"></div>
+
+          <!-- Total -->
+          <div class="flex justify-between items-baseline mb-5">
+            <span class="font-mono text-xs uppercase text-ink/70 tracking-tight">A payer</span>
+            <span class="font-serif text-3xl md:text-4xl text-ink tabular-nums leading-none">
+              {{ formatPrice(totalTTC) }}<span class="font-mono text-base text-ink/70 ml-2">F CFA</span>
+            </span>
+          </div>
+
+          <!-- Promo code toggle -->
+          <div class="mb-5">
+            <div v-if="!promoApplied" class="flex gap-2 items-end">
+              <UiBaseInput
+                v-model="promoInput"
+                label="[+] CODE PROMO"
+                placeholder="CODE"
+                class="flex-1"
+                :class="'!bg-transparent !border-0 !border-b-2 !border-ink/40 !rounded-none focus:!border-orange-primary'"
+              />
+              <UiBaseButton
+                variant="secondary"
+                size="md"
+                :loading="promoLoading"
+                :disabled="!promoInput.trim()"
+                @click="applyPromo"
+              >
+                Appliquer
+              </UiBaseButton>
             </div>
+            <p v-else class="font-mono text-xs uppercase text-orange-primary">
+              [ok] code applique : {{ cartStore.promoCode }}
+            </p>
+          </div>
+
+          <!-- CTA principal (souche) : bouton natif billet IRL -->
+          <button
+            type="button"
+            :disabled="isProcessing"
+            class="w-full inline-flex items-center justify-center gap-2 px-6 py-4 bg-orange-primary text-white font-mono text-sm uppercase font-bold border-2 border-ink hover:bg-orange-light disabled:opacity-60 disabled:cursor-not-allowed tracking-tight"
+            @click="pay"
+          >
+            <svg v-if="isProcessing" class="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" class="opacity-25"/>
+              <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" class="opacity-75"/>
+            </svg>
+            <template v-if="isFreeEvent">
+              {{ isInscription ? 'CONFIRMER MON INSCRIPTION >>>' : 'CONFIRMER MA COMMANDE >>>' }}
+            </template>
+            <template v-else>
+              PAYER {{ formatPrice(totalTTC) }} &gt;&gt;&gt;
+            </template>
+          </button>
+
+          <!-- Trust signals -->
+          <div class="flex items-center justify-center gap-2 text-[0.65rem] font-mono uppercase text-ink/50 tracking-tight mt-3">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-ink/40" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <span>paiement chiffre . wave . orange money . free money . carte</span>
+          </div>
+
+          <!-- Politique de remboursement -->
+          <div v-if="eventData?.refund_policy_label" class="border-l-2 border-ink/30 pl-3 py-2 font-mono text-[0.7rem] text-ink/60 leading-relaxed mt-4">
+            <strong class="text-ink">Politique de remboursement :</strong> {{ eventData.refund_policy_label }}
           </div>
         </div>
 
         <!-- Form column -->
-        <div class="order-last md:order-first flex flex-col gap-8">
+        <div class="p-6 md:p-8 order-2 md:order-1 flex flex-col gap-8">
 
           <!-- Bandeau session expirée : informer l'utilisateur qu'il a été
                basculé en guest et lui proposer de se reconnecter sans perdre
@@ -232,7 +319,8 @@ const operatorOptions = computed(() =>
           <!-- Section: Guest buyer identity (unauthenticated checkout) -->
           <div v-if="isGuest" class="flex flex-col gap-4">
             <div>
-              <h2 class="text-lg font-semibold text-text-primary">Vos informations</h2>
+              <h2 class="font-mono text-sm uppercase tracking-tight text-ink mb-1">01&nbsp;&nbsp;IDENTITE</h2>
+              <div class="border-b border-ink/40 mb-5"></div>
               <p class="text-sm text-text-secondary mt-1">
                 Vous recevrez vos billets à cette adresse email.
                 <NuxtLink
@@ -249,6 +337,7 @@ const operatorOptions = computed(() =>
               autocapitalize="words"
               placeholder="Awa Diallo"
               :error="formErrors.guestName"
+              :class="'!bg-transparent !border-0 !border-b-2 !border-ink/40 !rounded-none focus:!border-orange-primary'"
             />
             <UiBaseInput
               v-model="guestInfo.email"
@@ -261,6 +350,7 @@ const operatorOptions = computed(() =>
               spellcheck="false"
               placeholder="vous@example.com"
               :error="formErrors.guestEmail"
+              :class="'!bg-transparent !border-0 !border-b-2 !border-ink/40 !rounded-none focus:!border-orange-primary'"
             />
             <UiBaseInput
               v-model="guestInfo.phone"
@@ -270,6 +360,7 @@ const operatorOptions = computed(() =>
               inputmode="tel"
               placeholder="+221 77 123 45 67"
               :error="formErrors.guestPhone"
+              :class="'!bg-transparent !border-0 !border-b-2 !border-ink/40 !rounded-none focus:!border-orange-primary'"
             />
           </div>
 
@@ -281,7 +372,8 @@ const operatorOptions = computed(() =>
 
           <!-- Récapitulatif inscription -->
           <div v-if="isInscription && (registrationData.guest_name || registrationData.guest_email || registrationData.guest_phone || registrationData.guest_company)" class="bg-white rounded-xl p-5">
-            <h3 class="text-sm font-semibold text-text-primary mb-3">Vos informations d'inscription</h3>
+            <h2 class="font-mono text-sm uppercase tracking-tight text-ink mb-1">01&nbsp;&nbsp;INSCRIPTION</h2>
+            <div class="border-b border-ink/40 mb-5"></div>
             <div class="flex flex-col gap-2">
               <div v-if="registrationData.guest_name" class="flex justify-between text-sm">
                 <span class="text-text-secondary">Nom complet</span>
@@ -305,28 +397,29 @@ const operatorOptions = computed(() =>
           <!-- Section: Payment method (paid events only) -->
           <template v-if="!isFreeEvent">
             <div class="flex flex-col gap-4">
-              <h2 class="text-lg font-semibold text-text-primary">Paiement</h2>
+              <div>
+                <h2 class="font-mono text-sm uppercase tracking-tight text-ink mb-1">02&nbsp;&nbsp;PAIEMENT</h2>
+                <div class="border-b border-ink/40 mb-5"></div>
+              </div>
 
-              <!-- Payment mode pills -->
-              <div class="flex gap-3">
-                <button
-                  class="px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-200 border cursor-pointer"
-                  :class="paymentMode === 'mobile'
-                    ? 'bg-text-primary text-white border-text-primary'
-                    : 'bg-white text-text-secondary border-border-light hover:border-text-tertiary'"
+              <!-- Payment mode : radio list monospace billet IRL -->
+              <div class="space-y-2 font-mono text-sm py-2">
+                <label
+                  class="flex items-center gap-2 cursor-pointer text-ink hover:text-orange-primary"
                   @click="paymentMode = 'mobile'"
                 >
-                  Mobile Money
-                </button>
-                <button
-                  class="px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-200 border cursor-pointer"
-                  :class="paymentMode === 'card'
-                    ? 'bg-text-primary text-white border-text-primary'
-                    : 'bg-white text-text-secondary border-border-light hover:border-text-tertiary'"
+                  <span v-if="paymentMode === 'mobile'" class="text-orange-primary">(o)</span>
+                  <span v-else class="text-ink/40">(.)</span>
+                  <span :class="{ 'font-bold': paymentMode === 'mobile' }" class="text-ink">Mobile Money</span>
+                </label>
+                <label
+                  class="flex items-center gap-2 cursor-pointer text-ink hover:text-orange-primary"
                   @click="paymentMode = 'card'"
                 >
-                  Carte bancaire
-                </button>
+                  <span v-if="paymentMode === 'card'" class="text-orange-primary">(o)</span>
+                  <span v-else class="text-ink/40">(.)</span>
+                  <span :class="{ 'font-bold': paymentMode === 'card' }" class="text-ink">Carte bancaire</span>
+                </label>
               </div>
               <p v-if="formErrors.paymentMode" class="text-xs text-red-500">{{ formErrors.paymentMode }}</p>
             </div>
@@ -340,6 +433,7 @@ const operatorOptions = computed(() =>
                   :options="countryOptions"
                   placeholder="Sélectionnez votre pays"
                   :error="formErrors.country"
+                  :class="'!bg-transparent !border-0 !border-b-2 !border-ink/40 !rounded-none focus:!border-orange-primary'"
                   @update:model-value="selectedCountry = String($event)"
                 />
 
@@ -351,6 +445,7 @@ const operatorOptions = computed(() =>
                     :options="operatorOptions"
                     placeholder="Choisissez un opérateur"
                     :error="formErrors.operator"
+                    :class="'!bg-transparent !border-0 !border-b-2 !border-ink/40 !rounded-none focus:!border-orange-primary'"
                     @update:model-value="selectedOperator = String($event)"
                   />
                 </Transition>
@@ -366,6 +461,7 @@ const operatorOptions = computed(() =>
                     placeholder="77 123 45 67"
                     :prefix="countryDialCode"
                     :error="formErrors.phone"
+                    :class="'!bg-transparent !border-0 !border-b-2 !border-ink/40 !rounded-none focus:!border-orange-primary'"
                   />
                 </Transition>
               </div>
@@ -382,35 +478,6 @@ const operatorOptions = computed(() =>
               </div>
             </Transition>
           </template>
-
-          <!-- Politique de remboursement (transparence pré-paiement, exigence légale) -->
-          <div v-if="eventData?.refund_policy_label" class="bg-orange-dim/40 border border-orange-primary/30 rounded-lg px-4 py-3 mb-3 flex items-start gap-2.5">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-orange-primary shrink-0 mt-0.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            <div class="flex-1 text-xs text-text-secondary leading-relaxed">
-              <strong class="text-text-primary">Politique de remboursement :</strong> {{ eventData.refund_policy_label }}
-            </div>
-          </div>
-
-          <!-- Action button (desktop : visible ici ; mobile : on garde + sticky en bas) -->
-          <div class="flex flex-col gap-3">
-            <UiBaseButton
-              variant="primary"
-              size="md"
-              :loading="isProcessing"
-              :disabled="isProcessing"
-              class="w-full !py-3 !text-base"
-              @click="pay"
-            >
-              <template v-if="isFreeEvent">{{ isInscription ? 'Confirmer mon inscription' : 'Confirmer ma commande' }}</template>
-              <template v-else>Payer {{ formatPrice(totalTTC) }}</template>
-            </UiBaseButton>
-
-            <!-- Trust signals enrichis : icône cadenas + mention chiffrement -->
-            <div class="flex items-center justify-center gap-2 text-xs text-text-tertiary">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-green-dark"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-              <span>Paiement chiffré · Wave · Orange Money · Free Money · Carte bancaire</span>
-            </div>
-          </div>
 
           <!-- Wizall confirmation -->
           <Transition name="fade-slide">
@@ -447,34 +514,35 @@ const operatorOptions = computed(() =>
             </div>
           </Transition>
         </div>
+        </div>
+
+        <!-- Footer perforation : detacher ici -->
+        <div class="border-t-2 border-dashed border-ink/40 py-3 px-6 flex items-center justify-between font-mono text-[0.7rem] text-ink/60 uppercase">
+          <span>&lt; detacher ici</span>
+          <span class="hidden md:inline">- - - - - - - - - -</span>
+          <span>&gt;</span>
+        </div>
       </div>
     </div>
 
-    <!-- Sticky CTA mobile : "Payer X F CFA" toujours visible en bas
-         Évite le scroll de 3-4 swipes pour atteindre le bouton.
-         Hidden sur desktop (md+) car le CTA primaire est déjà dans le flow. -->
+    <!-- Sticky CTA mobile : "PAYER X F >>>" toujours visible en bas (Direction A billet IRL)
+         Hidden sur desktop (md+) car le CTA principal de la souche est deja dans le flow. -->
     <div
       v-if="!cartStore.isEmpty"
-      class="md:hidden fixed left-0 right-0 z-40 px-4 bg-white border-t border-border-light shadow-[0_-4px_16px_rgba(0,0,0,0.06)]"
+      class="md:hidden fixed left-0 right-0 z-40 px-4 bg-orange-primary border-t-2 border-ink"
       :style="{ bottom: 0, paddingTop: '0.75rem', paddingBottom: 'calc(env(safe-area-inset-bottom) + 0.75rem)' }"
     >
-      <div class="flex items-center justify-between gap-3">
-        <div class="flex-1 min-w-0">
-          <div class="text-[10px] uppercase tracking-wider text-text-tertiary font-semibold">Total</div>
-          <div class="font-serif text-lg text-text-primary leading-none">{{ formatPrice(totalTTC) }}</div>
-        </div>
-        <button
-          type="button"
-          :disabled="isProcessing"
-          class="inline-flex items-center justify-center px-6 py-3 rounded-full bg-orange-primary text-white text-sm font-bold hover:bg-orange-light transition-colors disabled:opacity-60 disabled:cursor-not-allowed shrink-0"
-          @click="pay"
-        >
-          <svg v-if="isProcessing" class="animate-spin mr-2 h-4 w-4" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" class="opacity-25"/><path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" class="opacity-75"/></svg>
-          <template v-if="isProcessing">Traitement…</template>
-          <template v-else-if="isFreeEvent">Confirmer</template>
-          <template v-else>Payer maintenant</template>
-        </button>
-      </div>
+      <button
+        type="button"
+        :disabled="isProcessing"
+        class="w-full inline-flex items-center justify-center gap-2 px-6 py-3 bg-orange-primary text-white font-mono text-sm uppercase font-bold tracking-tight hover:bg-orange-light disabled:opacity-60 disabled:cursor-not-allowed"
+        @click="pay"
+      >
+        <svg v-if="isProcessing" class="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" class="opacity-25"/><path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" class="opacity-75"/></svg>
+        <template v-if="isProcessing">TRAITEMENT...</template>
+        <template v-else-if="isFreeEvent">CONFIRMER &gt;&gt;&gt;</template>
+        <template v-else>PAYER {{ formatPrice(totalTTC) }} &gt;&gt;&gt;</template>
+      </button>
     </div>
   </div>
 </template>
