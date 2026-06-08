@@ -149,10 +149,21 @@ onMounted(() => {
   const pad = (n: number) => n.toString().padStart(2, '0')
   issuedAt.value = `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}h${pad(d.getMinutes())}`
 })
+
+// Propager automatiquement le numero mobile money vers guestInfo.phone :
+// le champ telephone de la section identite est cache en mode Mobile Money
+// (UX : eviter la double saisie). Le backend require guest_phone, donc on
+// reconstitue la valeur complete (dial code + numero) ici.
+watch([mobileNumber, countryDialCode, paymentMode], () => {
+  if (paymentMode.value === 'mobile' && mobileNumber.value) {
+    const dial = countryDialCode.value ? `+${String(countryDialCode.value).replace(/^\+/, '')}` : ''
+    guestInfo.value.phone = `${dial}${mobileNumber.value}`.trim()
+  }
+})
 </script>
 
 <template>
-  <div class="min-h-screen bg-kraft">
+  <div class="min-h-screen bg-white">
     <div class="max-w-[1040px] mx-auto px-6 py-10 max-sm:px-4 max-sm:py-6">
       <!-- Back link -->
       <NuxtLink
@@ -352,7 +363,11 @@ onMounted(() => {
               :error="formErrors.guestEmail"
               :class="'!bg-transparent !border-0 !border-b-2 !border-ink/40 !rounded-none focus:!border-orange-primary'"
             />
+            <!-- Téléphone identité : SEULEMENT pour le paiement par carte.
+                 Sinon le numéro mobile money en bas du form sert aussi à
+                 contacter l'acheteur (évite la double saisie). -->
             <UiBaseInput
+              v-if="paymentMode === 'card'"
               v-model="guestInfo.phone"
               label="Numéro de téléphone"
               type="tel"
