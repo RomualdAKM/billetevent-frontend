@@ -2,7 +2,9 @@
 definePageMeta({ layout: 'landing' })
 
 const route = useRoute()
-const { getEvent } = useEventsApi()
+const { getEvent, getEvents } = useEventsApi()
+const { getOrganizerEvents } = usePublicApi()
+const authStore = useAuthStore()
 const cartStore = useCartStore()
 const { initPixels, trackViewContent, cleanup } = useTracking()
 const { success } = useNotification()
@@ -25,6 +27,26 @@ const accessMode = computed(() => event.value?.access_mode || 'payant')
 const isInscription = computed(() => accessMode.value === 'inscription')
 const isLibre = computed(() => accessMode.value === 'libre')
 const isPrivate = computed(() => !!event.value?.is_private)
+
+// "Lire la suite" toggle for long descriptions (fade mask + reveal button).
+const showFullDesc = ref(false)
+
+// YouTube video embed: parse any YouTube URL format and build the embed URL.
+const extractYoutubeId = (url: string): string | null => {
+  if (!url) return null
+  const match1 = url.match(/[?&]v=([^&]+)/)
+  if (match1?.[1]) return match1[1]
+  const match2 = url.match(/youtu\.be\/([^?&]+)/)
+  if (match2?.[1]) return match2[1]
+  const match3 = url.match(/embed\/([^?&]+)/)
+  if (match3?.[1]) return match3[1]
+  return null
+}
+
+const youtubeEmbedUrl = computed(() => {
+  const id = extractYoutubeId(event.value?.video_url)
+  return id ? `https://www.youtube.com/embed/${id}` : null
+})
 
 // ── Invitation gate (private events) ───────────────────────────
 const inviteToken = ref('')
@@ -132,6 +154,35 @@ const eventTime = computed(() => {
   return d.getHours().toString().padStart(2, '0') + 'h' + d.getMinutes().toString().padStart(2, '0')
 })
 
+// Same compact human format as /events/[slug].vue — single line, copes with
+// same-day vs multi-day, omits end-time when start === end.
+const formatTimeForRange = (iso: string) => {
+  if (!iso) return ''
+  const d = new Date(iso)
+  return d.getHours().toString().padStart(2, '0') + 'h' + d.getMinutes().toString().padStart(2, '0')
+}
+const formatDateShortRange = (iso: string) => {
+  if (!iso) return ''
+  return new Date(iso).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
+}
+const formattedDateRange = computed(() => {
+  const start = event.value?.date_start
+  if (!start) return ''
+  const end = event.value?.date_end
+  const dStart = new Date(start)
+  const startDate = dStart.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  const startTime = formatTimeForRange(start)
+  if (!end) return `${startDate} à ${startTime}`
+  const dEnd = new Date(end)
+  const sameDay = dStart.toDateString() === dEnd.toDateString()
+  const endTime = formatTimeForRange(end)
+  if (sameDay) {
+    if (startTime === endTime) return `${startDate} à ${startTime}`
+    return `${startDate}, ${startTime} — ${endTime}`
+  }
+  return `Du ${formatDateShortRange(start)} à ${startTime} au ${formatDateShortRange(end)} à ${endTime}`
+})
+
 const eventLocation = computed(() =>
   [event.value?.venue || event.value?.location, event.value?.city, event.value?.country]
     .filter(Boolean)
@@ -234,6 +285,22 @@ const isPast = computed(() => {
   return new Date(start).getTime() < Date.now()
 })
 
+// ── Follow organizer ──────────────────────────────────────────
+const orgFollowId = computed(() => event.value?.organizer?.id ?? null)
+const orgInitialFollowing = computed(() => !!event.value?.organizer?.is_following)
+const { isFollowing, loading: followLoading, toggleFollow } = useFollowOrganizer(orgFollowId, orgInitialFollowing)
+
+const showFollowButton = computed(() => {
+  if (!authStore.isLoggedIn) return false
+  if (!event.value?.organizer) return false
+  const userId = (authStore.user as any)?.id
+  return userId !== event.value.organizer.user_id && userId !== event.value.organizer.id
+})
+
+// ── Code promo (coupon) ───────────────────────────────────────
+const hasCoupon = ref(false)
+const couponCode = ref('')
+
 // ── Checkout navigation ────────────────────────────────────────
 const checkoutLoading = ref(false)
 
@@ -275,6 +342,7 @@ async function goToCheckout() {
         eventDate: eventDateLong.value,
         eventLocation: eventLocation.value,
         accessMode: accessMode.value,
+        couponCode: hasCoupon.value ? couponCode.value : null,
         invitationToken: (isPrivate.value && inviteVerified.value) ? inviteToken.value.trim() : null,
       },
     })
@@ -298,14 +366,117 @@ function scrollToTickets() {
 // ── Programme du jour ─────────────────────────────────────────
 const programme = computed(() => {
   const progs = event.value?.programs ?? []
-  return progs.map((p: any) => ({
+  const defaultChips = [
+    { chipClass: 'bg-bg-primary text-text-secondary border-border-light' },
+    { chipClass: 'bg-bg-primary text-text-secondary border-border-light' },
+    { chipClass: 'bg-bg-primary text-text-secondary border-border-light' },
+    { chipClass: 'bg-bg-primary text-text-secondary border-border-light' },
+  ]
+  return progs.map((p: any, i: number) => ({
     time: p.start_time ? new Date('1970-01-01T' + p.start_time).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '',
+    ampm: p.start_time && parseInt(p.start_time) >= 12 ? 'PM' : 'AM',
     title: p.title,
     sub: p.description ?? '',
     chip: p.title?.split(' ')[0] ?? '',
+    chipClass: defaultChips[i % defaultChips.length].chipClass,
     speaker: p.speaker_name,
+    speakerPhoto: p.speaker_photo,
   }))
 })
+
+// ── Points de vente (org-owned offline ticket counters) ───────
+const pointsDeVente = computed(() =>
+  (event.value?.points_of_sale ?? []).map((p: any) => ({
+    name: p.name,
+    addr: p.address,
+    hours: p.hours,
+    type: p.is_active ? 'Ouvert' : 'Fermé',
+    typeColor: p.is_active ? 'orange' : 'blue',
+  }))
+)
+
+// ── FAQ ──
+// Fallback générique quand l'organisateur n'a pas configuré ses propres FAQs.
+// NE PAS inclure de promesses de remboursement/transfert : ces règles dépendent
+// du refund_policy de chaque organisateur (affichées dans la page billetterie).
+const defaultFaqs = [
+  { q: 'Comment est-ce que je reçois mon billet ?', a: 'Votre billet est envoyé par email dès la confirmation de l\'achat. Le QR code fonctionne directement depuis votre téléphone à l\'entrée de l\'événement.', open: true },
+  { q: 'Que faire si je n\'ai pas reçu mon billet ?', a: 'Vérifiez vos spams. Sinon, connectez-vous à votre compte BilletEvent (rubrique "Mes billets") pour le télécharger à nouveau, ou contactez le support.', open: false },
+  { q: 'Le QR code de mon billet fonctionne-t-il hors-ligne ?', a: 'Oui. Téléchargez votre billet en PDF depuis votre espace ou faites une capture d\'écran — le QR code reste valable sans connexion à l\'entrée.', open: false },
+]
+
+const faqItems = ref<Array<{ q: string; a: string; open: boolean }>>([])
+
+watch(event, (ev) => {
+  const apiFaqs = ev?.faqs ?? []
+  if (apiFaqs.length) {
+    faqItems.value = apiFaqs.map((f: any, i: number) => ({ q: f.question, a: f.answer, open: i === 0 }))
+  } else {
+    faqItems.value = defaultFaqs.map(f => ({ ...f }))
+  }
+}, { immediate: true })
+
+function toggleFaq(index: number) {
+  const wasOpen = faqItems.value[index].open
+  faqItems.value.forEach(item => item.open = false)
+  if (!wasOpen) faqItems.value[index].open = true
+}
+
+// ── Autres evenements de l'organisateur + suggestions similaires ─
+const orgEvents = ref<any[]>([])
+// "Vous aimerez aussi" — events similaires (meme categorie OU meme ville,
+// excluant l'event actuel ET ceux du meme organisateur deja listes).
+const similarEvents = ref<any[]>([])
+
+watch(event, async (ev) => {
+  if (ev?.organizer?.id) {
+    try {
+      const res = await getOrganizerEvents(ev.organizer.id)
+      const list = res?.data ?? []
+      orgEvents.value = list
+        .filter((e: any) => e.id !== ev.id)
+        .slice(0, 3)
+        .map((e: any) => ({
+          id: e.id,
+          slug: e.slug || e.id,
+          title: e.title,
+          location: [e.city, e.country].filter(Boolean).join(', '),
+          date: e.date_start,
+          image: e.flyer_url,
+        }))
+    } catch (err) {
+      console.error('Error loading organizer events:', err)
+    }
+  }
+
+  // Charger des "events similaires" (meme categorie OU meme ville) en
+  // excluant l'event actuel + ceux du meme organisateur deja listes.
+  if (ev?.id) {
+    try {
+      const params: Record<string, any> = { per_page: 8 }
+      if (ev.category) params.category = ev.category
+      // On prefere meme ville si dispo, sinon on tombera sur same-category
+      if (ev.city) params.city = ev.city
+      const res: any = await getEvents(params)
+      const list = res?.data ?? []
+      const excludeIds = new Set<number | string>([ev.id, ...orgEvents.value.map(o => o.id)])
+      similarEvents.value = list
+        .filter((e: any) => !excludeIds.has(e.id))
+        .slice(0, 3)
+        .map((e: any) => ({
+          id: e.id,
+          slug: e.slug || e.id,
+          title: e.title,
+          location: [e.city, e.country].filter(Boolean).join(', '),
+          date: e.date_start,
+          image: e.flyer_url,
+          minPrice: e.min_price,
+        }))
+    } catch {
+      // Non bloquant — juste une suggestion bonus
+    }
+  }
+}, { immediate: true })
 
 // ── Artistes & Intervenants ───────────────────────────────────
 const artists = computed(() => {
@@ -391,23 +562,104 @@ const shareWhatsApp = () => {
   window.open(`https://wa.me/?text=${text}%20${encodeURIComponent(shareUrl.value)}`, '_blank')
 }
 
+const shareTwitter = () => {
+  if (typeof window === 'undefined') return
+  const url = encodeURIComponent(shareUrl.value)
+  const text = encodeURIComponent('Découvrez cet événement sur BilletEvent !')
+  window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, '_blank')
+}
+
+const shareLinkedIn = () => {
+  if (typeof window === 'undefined') return
+  const url = encodeURIComponent(shareUrl.value)
+  window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${url}`, '_blank')
+}
+
+const shareTelegram = () => {
+  if (typeof window === 'undefined') return
+  const url = encodeURIComponent(shareUrl.value)
+  const text = encodeURIComponent('Découvrez cet événement sur BilletEvent !')
+  window.open(`https://t.me/share/url?url=${url}&text=${text}`, '_blank')
+}
+
+const shareEmail = () => {
+  if (typeof window === 'undefined') return
+  const subject = encodeURIComponent('Découvrez cet événement sur BilletEvent')
+  const body = encodeURIComponent(`Je vous recommande cet événement : ${shareUrl.value}`)
+  window.open(`mailto:?subject=${subject}&body=${body}`)
+}
+
 // ── SEO / OG ───────────────────────────────────────────────────
 watchEffect(() => {
   if (!event.value) return
   const e = event.value
-  const title = `${e.title} — Billets`
-  const description = e.description
-    ? e.description.replace(/<[^>]*>/g, '').slice(0, 160)
-    : `Réservez vos billets pour ${e.title}`
-  const image = e.flyer_url || e.cover_image || e.image || '/logo.png'
+  const seoTitle = `${e.title} | BilletEvent`
+  const seoDescription = e.description
+    ? e.description.replace(/<[^>]*>/g, '').substring(0, 160)
+    : `Découvrez ${e.title} sur BilletEvent`
+  const seoImage = e.flyer_url || e.cover_image || e.image || '/logo.png'
+  const seoUrl = `https://billetevent.com/e/${e.slug || e.id}`
 
   useSeoMeta({
-    title,
-    ogTitle: title,
-    description,
-    ogDescription: description,
-    ogImage: image,
+    title: seoTitle,
+    ogTitle: seoTitle,
+    description: seoDescription,
+    ogDescription: seoDescription,
+    ogImage: seoImage,
+    ogUrl: seoUrl,
     ogType: 'website',
+    ogSiteName: 'BilletEvent',
+    twitterCard: 'summary_large_image',
+    twitterTitle: seoTitle,
+    twitterDescription: seoDescription,
+    twitterImage: seoImage,
+  })
+
+  useHead({
+    link: [
+      { rel: 'canonical', href: seoUrl }
+    ],
+    script: [
+      {
+        type: 'application/ld+json',
+        innerHTML: JSON.stringify({
+          '@context': 'https://schema.org',
+          '@type': 'Event',
+          name: e.title,
+          description: seoDescription,
+          image: seoImage,
+          startDate: e.date_start,
+          endDate: e.date_end,
+          eventStatus: 'https://schema.org/EventScheduled',
+          eventAttendanceMode: e.event_type === 'enligne'
+            ? 'https://schema.org/OnlineEventAttendanceMode'
+            : e.event_type === 'hybride'
+              ? 'https://schema.org/MixedEventAttendanceMode'
+              : 'https://schema.org/OfflineEventAttendanceMode',
+          location: {
+            '@type': 'Place',
+            name: e.location || e.city,
+            address: {
+              '@type': 'PostalAddress',
+              addressLocality: e.city,
+              addressCountry: e.country,
+              streetAddress: e.address,
+            }
+          },
+          organizer: {
+            '@type': 'Organization',
+            name: e.organizer?.display_name || e.organizer?.name || e.organizer?.first_name,
+          },
+          offers: e.passes?.length ? {
+            '@type': 'AggregateOffer',
+            lowPrice: Math.min(...e.passes.map((p: any) => p.price || 0)),
+            highPrice: Math.max(...e.passes.map((p: any) => p.price || 0)),
+            priceCurrency: 'XOF',
+            availability: 'https://schema.org/InStock',
+          } : undefined,
+        })
+      }
+    ]
   })
 })
 </script>
@@ -531,30 +783,115 @@ watchEffect(() => {
       </div>
     </section>
 
-    <!-- ─── DESCRIPTION ────────────────────────────────────── -->
+    <!-- ─── TOP STAT BAR ───────────────────────────────────── -->
+    <!-- Horizontal strip under the hero: event type badge + private chip +
+         date / venue / capacity / starting price. Mirrors /events/[slug].vue
+         (the canonical source) but adapted to the landing layout. -->
+    <div class="bg-surface border-b border-border-light overflow-x-auto">
+      <div class="max-w-[1080px] mx-auto px-5 flex items-center max-md:px-5 max-sm:flex-col max-sm:px-3 max-sm:items-stretch">
+        <div class="inline-flex items-center gap-2 border-r border-border-light px-5 py-3 whitespace-nowrap max-sm:border-r-0 max-sm:border-b max-sm:px-4 max-sm:py-2.5 max-sm:justify-start">
+          <span v-if="event?.event_type === 'enligne'" class="inline-flex items-center gap-1.5 px-3 py-[5px] rounded-full text-[0.73rem] font-bold tracking-wide bg-blue-50 text-blue-600">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10l4.553-2.276A1 1 0 0 1 21 8.618v6.764a1 1 0 0 1-1.447.894L15 14M5 18h8a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2z"/></svg>
+            En ligne
+          </span>
+          <span v-else-if="event?.event_type === 'hybride'" class="inline-flex items-center gap-1.5 px-3 py-[5px] rounded-full text-[0.73rem] font-bold tracking-wide bg-purple-50 text-purple-600">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            Hybride
+          </span>
+          <span v-else class="inline-flex items-center gap-1.5 px-3 py-[5px] rounded-full text-[0.73rem] font-bold tracking-wide bg-orange-dim text-orange-primary">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            Présentiel
+          </span>
+          <span v-if="event?.is_private" class="inline-flex items-center gap-1.5 px-3 py-[5px] rounded-full text-[0.73rem] font-bold tracking-wide bg-purple/10 text-purple">
+            Événement privé
+          </span>
+        </div>
+        <div class="flex items-start gap-2.5 px-6 py-3.5 border-r border-border-light max-sm:whitespace-normal max-sm:px-4 max-sm:py-3 max-sm:border-r-0 max-sm:border-b max-sm:w-full">
+          <div class="w-8 h-8 rounded-lg bg-bg-primary flex items-center justify-center shrink-0 mt-0.5"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+          <div class="min-w-0"><div class="text-xs text-text-secondary uppercase tracking-widest mb-px">Date</div><div class="text-sm font-semibold text-text-primary break-words">{{ event ? formattedDateRange : '' }}</div></div>
+        </div>
+        <div class="flex items-start gap-2.5 px-6 py-3.5 border-r border-border-light max-sm:whitespace-normal max-sm:px-4 max-sm:py-3 max-sm:border-b max-sm:border-r-0 max-sm:w-full">
+          <div class="w-8 h-8 rounded-lg bg-bg-primary flex items-center justify-center shrink-0 mt-0.5"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+          <div class="min-w-0"><div class="text-xs text-text-secondary uppercase tracking-widest mb-px">Lieu</div><div class="text-sm font-semibold text-text-primary break-words">{{ event ? [event.venue || event.location, event.city].filter(Boolean).join(', ') : '' }}</div></div>
+        </div>
+        <div class="flex items-start gap-2.5 px-6 py-3.5 border-r border-border-light max-sm:whitespace-normal max-sm:px-4 max-sm:py-3 max-sm:border-b max-sm:border-r-0 max-sm:w-full">
+          <div class="w-8 h-8 rounded-lg bg-bg-primary flex items-center justify-center shrink-0 mt-0.5"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+          <div class="min-w-0"><div class="text-xs text-text-secondary uppercase tracking-widest mb-px">Participants</div><div class="text-sm font-semibold text-text-primary">{{ event?.max_capacity ? new Intl.NumberFormat('fr-FR').format(event.max_capacity) : '—' }}</div></div>
+        </div>
+        <div class="flex items-start gap-2.5 px-6 py-3.5 max-sm:whitespace-normal max-sm:px-4 max-sm:py-3 max-sm:w-full">
+          <div class="w-8 h-8 rounded-lg bg-bg-primary flex items-center justify-center shrink-0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/><line x1="9" y1="9" x2="9" y2="15"/></svg></div>
+          <div class="min-w-0"><div class="text-xs text-text-secondary uppercase tracking-widest mb-px">{{ isLibre ? 'Accès' : 'À partir de' }}</div><div class="text-sm font-semibold text-text-primary">{{ isLibre ? 'Entrée libre' : (event?.min_price != null ? formatPrice(event.min_price) : '—') }}</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── DESCRIPTION (avec Lire la suite + thèmes) ──────── -->
     <!-- Rendered as plain text via {{ }} (NOT v-html) to prevent XSS through
          the organiser-provided description on a public, paid-traffic landing.
          whitespace-pre-line preserves paragraphs. -->
-    <section v-if="event.description" class="bg-bg-primary py-12 px-5">
+    <section v-if="event.description || event.category" class="bg-bg-primary py-12 px-5">
       <div class="max-w-[720px] mx-auto">
-        <h2 class="font-serif text-[1.6rem] text-text-primary mb-5">À propos</h2>
-        <p class="prose prose-sm text-text-secondary leading-relaxed whitespace-pre-line">{{ event.description }}</p>
+        <div class="bg-surface border border-border-light rounded-xl p-7 max-sm:p-4">
+          <h2 class="font-serif text-lg font-normal mb-4 text-text-primary">À propos de cet événement</h2>
+          <div v-if="event.description" class="relative" :class="{ 'max-h-[120px] overflow-hidden': !showFullDesc }">
+            <div class="text-sm text-text-secondary leading-relaxed mb-3 whitespace-pre-line">{{ event.description }}</div>
+            <div v-if="!showFullDesc" class="absolute bottom-0 left-0 right-0 h-[50px] bg-gradient-to-t from-surface to-transparent"></div>
+          </div>
+          <button v-if="event.description && !showFullDesc" type="button" class="text-sm font-semibold text-orange-primary cursor-pointer inline-flex items-center gap-1 mt-2.5 border-none bg-transparent transition-all hover:gap-2" @click="showFullDesc = true">Lire la suite →</button>
+          <div v-if="event.category" class="flex items-center gap-2 flex-wrap mt-5 pt-5 border-t border-border-light">
+            <span class="text-xs text-text-tertiary">Thèmes:</span>
+            <span class="bg-bg-primary border border-border-light rounded-full px-3 py-1 text-xs font-medium text-text-secondary">{{ event.category }}</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── VIDÉO YOUTUBE ──────────────────────────────────── -->
+    <section v-if="youtubeEmbedUrl" id="video" class="bg-surface py-12 px-5">
+      <div class="max-w-[720px] mx-auto">
+        <div class="bg-surface border border-border-light rounded-xl p-7 max-sm:p-4">
+          <h2 class="font-serif text-lg font-normal mb-4 text-text-primary">Vidéo</h2>
+          <div class="relative w-full rounded-lg overflow-hidden" style="padding-bottom: 56.25%;">
+            <iframe
+              :src="youtubeEmbedUrl"
+              class="absolute top-0 left-0 w-full h-full border-0"
+              loading="lazy"
+              allowfullscreen
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            ></iframe>
+          </div>
+        </div>
       </div>
     </section>
 
     <!-- ─── PROGRAMME DU JOUR ──────────────────────────────── -->
-    <section v-if="programme.length" class="bg-surface py-12 px-5">
+    <section v-if="programme.length" id="programme" class="bg-surface py-12 px-5">
       <div class="max-w-[720px] mx-auto">
-        <h2 class="font-serif text-[1.6rem] text-text-primary mb-5">Programme du jour</h2>
-        <div class="flex flex-col rounded-xl border border-border-light overflow-hidden">
-          <div v-for="(item, i) in programme" :key="i" class="grid grid-cols-[80px_1fr] items-start gap-4 p-4 border-b border-border-light last:border-b-0 hover:bg-bg-primary transition-colors max-sm:grid-cols-[56px_1fr] max-sm:gap-3">
-            <div class="text-center bg-bg-primary rounded-lg py-2 px-1">
-              <div class="font-serif text-[1.1rem] text-text-primary leading-none max-sm:text-base">{{ item.time || '—' }}</div>
-            </div>
-            <div class="min-w-0">
-              <div class="text-sm font-semibold text-text-primary mb-1">{{ item.title }}</div>
-              <div v-if="item.sub" class="text-xs text-text-tertiary leading-relaxed">{{ item.sub }}</div>
-              <div v-if="item.speaker" class="text-[0.7rem] text-orange-primary uppercase tracking-wider font-bold mt-1.5">{{ item.speaker }}</div>
+        <div class="bg-surface border border-border-light rounded-xl p-7 max-sm:p-4 overflow-hidden">
+          <h2 class="font-serif text-lg font-normal mb-4 text-text-primary">Programme du jour</h2>
+          <div class="flex flex-col">
+            <div v-for="(item, i) in programme" :key="i" class="grid grid-cols-[64px_1fr_auto] items-center gap-4 py-[15px] px-1.5 border-b border-border-light rounded-lg transition-colors hover:bg-bg-primary last:border-b-0 max-sm:grid-cols-[44px_1fr_auto] max-sm:gap-2 max-sm:px-0">
+              <div class="text-center bg-bg-primary rounded-lg py-2 px-1">
+                <div class="font-serif text-[1.05rem] text-text-primary leading-none max-sm:text-[0.9rem]">{{ item.time }}</div>
+                <div class="text-[0.62rem] text-text-tertiary uppercase tracking-wide">{{ item.ampm }}</div>
+              </div>
+              <div class="min-w-0">
+                <div class="text-sm font-semibold text-text-primary mb-[3px] break-words">{{ item.title }}</div>
+                <div v-if="item.sub" class="text-[0.77rem] text-text-tertiary break-words">{{ item.sub }}</div>
+                <div v-if="item.speaker" class="flex items-center gap-2 mt-1.5">
+                  <NuxtImg
+                    v-if="item.speakerPhoto"
+                    :src="item.speakerPhoto"
+                    :alt="item.speaker"
+                    :width="20"
+                    :height="20"
+                    class="w-5 h-5 rounded-full object-cover bg-bg-secondary shrink-0"
+                    loading="lazy"
+                  />
+                  <span class="text-[0.7rem] text-orange-primary uppercase tracking-wider font-bold">{{ item.speaker }}</span>
+                </div>
+              </div>
+              <span class="px-2 py-1 rounded-full text-[0.67rem] font-bold tracking-wide uppercase whitespace-nowrap border max-sm:text-[0.6rem] max-sm:px-1.5 shrink-0" :class="item.chipClass">{{ item.chip }}</span>
             </div>
           </div>
         </div>
@@ -562,27 +899,30 @@ watchEffect(() => {
     </section>
 
     <!-- ─── ARTISTES & INTERVENANTS ────────────────────────── -->
-    <section v-if="artists.length" class="bg-bg-primary py-12 px-5">
+    <section v-if="artists.length" id="artistes" class="bg-bg-primary py-12 px-5">
       <div class="max-w-[720px] mx-auto">
-        <h2 class="font-serif text-[1.6rem] text-text-primary mb-5">Artistes &amp; Intervenants</h2>
-        <div class="grid grid-cols-3 gap-4 max-sm:grid-cols-2">
-          <div v-for="(artist, i) in artists" :key="i" class="flex flex-col items-center text-center p-4 border border-border-light rounded-xl bg-surface hover:border-orange-primary transition-colors">
-            <div class="w-20 h-20 rounded-full mb-3 overflow-hidden border-[3px] border-border-light bg-bg-secondary max-sm:w-16 max-sm:h-16">
-              <NuxtImg
-                v-if="artist.img"
-                :src="artist.img"
-                :alt="artist.name"
-                :width="80"
-                :height="80"
-                class="w-full h-full object-cover"
-                loading="lazy"
-              />
-              <div v-else class="w-full h-full flex items-center justify-center text-text-tertiary font-bold">
-                {{ artist.name?.charAt(0).toUpperCase() }}
+        <div class="bg-surface border border-border-light rounded-xl p-7 max-sm:p-4 overflow-hidden">
+          <h2 class="font-serif text-lg font-normal mb-4 text-text-primary break-words">Artistes &amp; Intervenants</h2>
+          <div class="grid grid-cols-3 gap-4 max-sm:grid-cols-2">
+            <div v-for="(artist, i) in artists" :key="i" class="flex flex-col items-center text-center p-4 pb-4 border border-border-light rounded-xl bg-surface transition-colors hover:border-orange-primary max-sm:p-3">
+              <div class="w-24 h-24 rounded-full mb-3.5 shrink-0 overflow-hidden border-[3px] border-border-light bg-bg-secondary max-sm:w-16 max-sm:h-16 max-sm:mb-2.5">
+                <NuxtImg
+                  v-if="artist.img"
+                  :src="artist.img"
+                  :alt="artist.name"
+                  :width="96"
+                  :height="96"
+                  class="w-full h-full object-cover block"
+                  loading="lazy"
+                  :placeholder="[20, 20]"
+                />
+                <div v-else class="w-full h-full flex items-center justify-center text-text-tertiary font-bold">
+                  {{ artist.name?.charAt(0).toUpperCase() }}
+                </div>
               </div>
+              <div class="font-serif text-base text-text-primary mb-1.5 break-words w-full leading-snug max-sm:text-sm max-sm:leading-tight">{{ artist.name }}</div>
+              <div v-if="artist.role" class="inline-block text-xs font-bold tracking-wide uppercase bg-bg-primary text-text-tertiary px-3 py-1 rounded-full max-w-full leading-tight truncate">{{ artist.role }}</div>
             </div>
-            <div class="font-serif text-sm text-text-primary mb-1 leading-snug break-words w-full">{{ artist.name }}</div>
-            <div v-if="artist.role" class="text-[0.7rem] font-bold uppercase tracking-wide text-text-tertiary truncate max-w-full">{{ artist.role }}</div>
           </div>
         </div>
       </div>
@@ -723,6 +1063,35 @@ watchEffect(() => {
       </div>
     </section>
 
+    <!-- ─── POINTS DE VENTE ────────────────────────────────── -->
+    <section v-if="pointsDeVente.length > 0" class="bg-bg-primary py-12 px-5">
+      <div class="max-w-[720px] mx-auto">
+        <div class="bg-surface border border-border-light rounded-xl p-7 max-sm:p-4">
+          <h2 class="font-serif text-lg font-normal mb-4 text-text-primary">Où acheter votre billet en personne</h2>
+          <div class="flex flex-col gap-3">
+            <div v-for="(pdv, i) in pointsDeVente" :key="i" class="flex items-start gap-3.5 p-3.5 bg-bg-primary rounded-lg border border-border-light">
+              <div class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" :class="pdv.typeColor === 'orange' ? 'bg-orange-dim text-orange-primary' : 'bg-blue-dim text-text-secondary'">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="text-sm font-bold text-text-primary mb-[3px]">{{ pdv.name }}</div>
+                <div class="text-xs text-text-secondary mb-0.5">{{ pdv.addr }}</div>
+                <div class="text-xs text-text-tertiary">{{ pdv.hours }}</div>
+              </div>
+              <div class="text-xs font-bold rounded-full px-2.5 py-1 whitespace-nowrap shrink-0" :class="pdv.typeColor === 'orange' ? 'text-orange-primary bg-orange-dim' : 'text-text-secondary bg-blue-dim'">{{ pdv.type }}</div>
+            </div>
+            <div class="text-center text-xs text-text-tertiary py-1.5">Vous pouvez aussi acheter votre billet en ligne — paiement instantané.</div>
+            <div class="text-center pt-2">
+              <NuxtLink to="/points-de-vente" class="inline-flex items-center gap-1.5 text-xs font-semibold text-orange-primary hover:underline">
+                Voir tous les points de vente
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+              </NuxtLink>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- ─── INVITATION GATE (private events) ──────────────── -->
     <section id="invitation-gate" v-if="!isPast && isPrivate && !inviteVerified" class="bg-surface py-12 px-5 scroll-mt-24">
       <div class="max-w-[480px] mx-auto rounded-2xl border-2 border-orange-primary bg-orange-dim/30 p-8 text-center">
@@ -815,6 +1184,21 @@ watchEffect(() => {
           </div>
         </div>
 
+        <!-- Code promo -->
+        <div v-if="totalQuantity > 0 && !isInscription" class="mt-5 flex flex-col gap-2.5">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input v-model="hasCoupon" type="checkbox" class="w-4 h-4 accent-orange-primary cursor-pointer" />
+            <span class="text-sm text-text-secondary">J'ai un code promo</span>
+          </label>
+          <input
+            v-if="hasCoupon"
+            v-model="couponCode"
+            type="text"
+            placeholder="Entrez votre code promo"
+            class="w-full px-3.5 py-2.5 rounded-xl border border-border-light bg-bg-primary text-sm text-text-primary outline-none transition-colors focus:border-orange-primary"
+          />
+        </div>
+
         <!-- Inline summary + CTA (desktop) -->
         <div
           v-if="totalQuantity > 0"
@@ -834,54 +1218,226 @@ watchEffect(() => {
             <template v-else>{{ isInscription ? 'Confirmer mon inscription' : 'Continuer vers le paiement' }}</template>
           </button>
         </div>
+
+        <!-- Trust badges -->
+        <div v-if="totalQuantity === 0 && !isSoldOut && passes.length > 0" class="mt-6 flex justify-center gap-5 flex-wrap">
+          <span class="flex items-center gap-1.5 text-xs text-text-tertiary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Paiement sécurisé
+          </span>
+          <span class="flex items-center gap-1.5 text-xs text-text-tertiary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            Réception instantanée
+          </span>
+          <span class="flex items-center gap-1.5 text-xs text-text-tertiary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            Remboursable
+          </span>
+        </div>
       </div>
     </section>
 
     <!-- ─── ORGANIZER + SHARE ──────────────────────────────── -->
     <section class="bg-bg-primary py-12 px-5">
-      <div class="max-w-[720px] mx-auto grid grid-cols-1 md:grid-cols-[1fr_auto] gap-6 items-center">
-        <div class="flex items-center gap-4">
-          <NuxtImg
-            v-if="event.organizer?.avatar || event.organizer?.logo"
-            :src="event.organizer.avatar || event.organizer.logo"
-            :alt="event.organizer.name || ''"
-            :width="56"
-            :height="56"
-            class="w-14 h-14 rounded-full object-cover bg-bg-secondary"
-            loading="lazy"
-          />
-          <div v-else class="w-14 h-14 rounded-full bg-orange-dim text-orange-primary flex items-center justify-center font-bold text-lg">
-            {{ (event.organizer?.name || event.organizer?.company_name || '?').charAt(0).toUpperCase() }}
+      <div class="max-w-[720px] mx-auto flex flex-col gap-6">
+        <div class="flex items-center justify-between flex-wrap gap-4">
+          <div class="flex items-center gap-4 min-w-0">
+            <NuxtImg
+              v-if="event.organizer?.avatar || event.organizer?.logo"
+              :src="event.organizer.avatar || event.organizer.logo"
+              :alt="event.organizer.name || ''"
+              :width="56"
+              :height="56"
+              class="w-14 h-14 rounded-full object-cover bg-bg-secondary"
+              loading="lazy"
+            />
+            <div v-else class="w-14 h-14 rounded-full bg-orange-dim text-orange-primary flex items-center justify-center font-bold text-lg">
+              {{ (event.organizer?.name || event.organizer?.company_name || '?').charAt(0).toUpperCase() }}
+            </div>
+            <div class="min-w-0">
+              <div class="text-xs text-text-tertiary mb-0.5">Organisé par</div>
+              <div class="font-serif text-base text-text-primary truncate">{{ event.organizer?.company_name || event.organizer?.name || 'Organisateur' }}</div>
+            </div>
           </div>
-          <div>
-            <div class="text-xs text-text-tertiary uppercase tracking-wider mb-0.5">Organisé par</div>
-            <div class="font-serif text-base text-text-primary">{{ event.organizer?.company_name || event.organizer?.name || 'Organisateur' }}</div>
-          </div>
+          <button
+            v-if="showFollowButton"
+            type="button"
+            :disabled="followLoading"
+            class="px-4 py-1.5 rounded-full text-sm font-medium cursor-pointer transition-colors shrink-0"
+            :class="isFollowing ? 'border border-orange-primary text-orange-primary hover:bg-orange-50' : 'bg-orange-primary text-white hover:bg-orange-600'"
+            @click="toggleFollow"
+          >{{ isFollowing ? 'Suivi' : 'Suivre' }}</button>
         </div>
 
-        <div class="flex items-center gap-2">
-          <button
-            type="button"
-            aria-label="Partager sur WhatsApp"
-            class="w-11 h-11 rounded-full bg-surface border border-border-light flex items-center justify-center text-text-secondary hover:border-orange-primary hover:text-orange-primary transition-colors"
-            @click="shareWhatsApp"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-          </button>
-          <button
-            type="button"
-            :aria-label="linkCopied ? 'Lien copié' : 'Copier le lien'"
-            class="inline-flex items-center gap-2 h-11 px-4 rounded-full bg-surface border border-border-light text-sm font-semibold transition-colors"
-            :class="linkCopied ? 'border-green-dark text-green-dark' : 'text-text-secondary hover:border-orange-primary hover:text-orange-primary'"
-            @click="copyShareLink"
-          >
-            <svg v-if="!linkCopied" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-            <svg v-else width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
-            {{ linkCopied ? 'Copié' : 'Copier le lien' }}
-          </button>
+        <div class="bg-surface border border-border-light rounded-xl p-5">
+          <div class="text-xs font-bold text-text-tertiary mb-3">Partager cet événement</div>
+          <div class="flex gap-2 flex-wrap">
+            <button
+              type="button"
+              class="flex-1 min-w-[70px] flex items-center justify-center gap-[5px] border border-border-light rounded-lg py-[9px] px-1.5 text-xs font-semibold text-text-secondary cursor-pointer bg-bg-primary transition-all hover:border-orange-primary hover:text-orange-primary"
+              :class="linkCopied ? 'border-green-dark text-green-dark' : ''"
+              @click="copyShareLink"
+            >
+              <svg v-if="!linkCopied" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+              <svg v-else width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+              {{ linkCopied ? 'Copié !' : 'Lien' }}
+            </button>
+            <button
+              type="button"
+              class="flex-1 min-w-[70px] flex items-center justify-center gap-[5px] border border-border-light rounded-lg py-[9px] px-1.5 text-xs font-semibold text-text-secondary cursor-pointer bg-bg-primary transition-all hover:border-orange-primary hover:text-orange-primary"
+              @click="shareWhatsApp"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+              WhatsApp
+            </button>
+            <button
+              type="button"
+              class="flex-1 min-w-[70px] flex items-center justify-center gap-[5px] border border-border-light rounded-lg py-[9px] px-1.5 text-xs font-semibold text-text-secondary cursor-pointer bg-bg-primary transition-all hover:border-orange-primary hover:text-orange-primary"
+              @click="shareTwitter"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"/></svg>
+              Twitter
+            </button>
+            <button
+              type="button"
+              class="flex-1 min-w-[70px] flex items-center justify-center gap-[5px] border border-border-light rounded-lg py-[9px] px-1.5 text-xs font-semibold text-text-secondary cursor-pointer bg-bg-primary transition-all hover:border-orange-primary hover:text-orange-primary"
+              @click="shareLinkedIn"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+              LinkedIn
+            </button>
+            <button
+              type="button"
+              class="flex-1 min-w-[70px] flex items-center justify-center gap-[5px] border border-border-light rounded-lg py-[9px] px-1.5 text-xs font-semibold text-text-secondary cursor-pointer bg-bg-primary transition-all hover:border-orange-primary hover:text-orange-primary"
+              @click="shareTelegram"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              Telegram
+            </button>
+            <button
+              type="button"
+              class="flex-1 min-w-[70px] flex items-center justify-center gap-[5px] border border-border-light rounded-lg py-[9px] px-1.5 text-xs font-semibold text-text-secondary cursor-pointer bg-bg-primary transition-all hover:border-orange-primary hover:text-orange-primary"
+              @click="shareEmail"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              Email
+            </button>
+          </div>
         </div>
       </div>
     </section>
+
+    <!-- ─── FAQ (accordéon, dernière section avant discovery) ─── -->
+    <section class="bg-bg-primary py-12 px-5">
+      <div class="max-w-[820px] mx-auto">
+        <div id="faq" class="bg-surface border border-border-light rounded-xl p-5">
+          <div class="text-sm font-semibold text-text-secondary mb-3.5">Questions fréquentes</div>
+          <div v-for="(item, i) in faqItems" :key="i" class="border-b border-border-light last:border-b-0">
+            <button class="w-full bg-transparent border-none text-left py-[13px] cursor-pointer flex justify-between items-center font-sans text-[0.84rem] font-medium text-text-primary gap-2.5" :aria-expanded="item.open" @click="toggleFaq(i)">
+              {{ item.q }}
+              <span class="text-orange-primary text-[1.1rem] shrink-0 transition-transform" :class="{ 'rotate-45': item.open }">+</span>
+            </button>
+            <div class="text-[0.8rem] text-text-tertiary leading-[1.7] overflow-hidden transition-all" :class="item.open ? 'max-h-[500px] pb-[13px]' : 'max-h-0'">{{ item.a }}</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── AUTRES EVENEMENTS DE L'ORGANISATEUR ────────────── -->
+    <section v-if="orgEvents.length > 0" class="bg-bg-secondary py-16 px-10 border-t border-border-light max-md:py-12 max-md:px-6 max-sm:py-9 max-sm:px-4">
+      <div class="max-w-[1100px] mx-auto">
+        <div class="flex items-center justify-between mb-8 flex-wrap gap-4 max-sm:flex-col max-sm:items-start">
+          <div class="flex items-center gap-4">
+            <div class="w-[48px] h-[48px] rounded-full bg-orange-primary flex items-center justify-center shrink-0">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+            </div>
+            <div>
+              <div class="text-xs font-semibold text-text-tertiary mb-0.5">Organisateur</div>
+              <div class="font-serif text-lg text-text-primary leading-tight">{{ event?.organizer?.display_name || event?.organizer?.name || '' }}</div>
+            </div>
+          </div>
+          <NuxtLink to="/events" class="inline-flex items-center gap-1.5 text-sm font-semibold text-text-secondary border border-border-light px-5 py-2 rounded-full transition-all whitespace-nowrap hover:text-orange-primary hover:border-orange-primary">
+            Voir tous les evenements
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </NuxtLink>
+        </div>
+
+        <div class="grid grid-cols-3 gap-5 max-md:grid-cols-1 max-md:gap-4">
+          <NuxtLink v-for="evt in orgEvents" :key="evt.id" :to="`/events/${evt.slug || evt.id}`" class="bg-white border border-border-light rounded-xl overflow-hidden flex flex-col transition-all duration-200 cursor-pointer no-underline hover:bg-gray-50">
+            <div class="h-[120px] relative overflow-hidden shrink-0 bg-bg-secondary">
+              <NuxtImg v-if="evt.image" :src="evt.image" :alt="evt.title" class="w-full h-full object-cover" loading="lazy" :placeholder="[20, 20]" />
+              <div v-else class="w-full h-full flex items-center justify-center">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-text-tertiary"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              </div>
+            </div>
+            <div class="p-4 flex flex-col gap-2 flex-1">
+              <div class="text-sm font-semibold text-text-primary leading-snug">{{ evt.title }}</div>
+              <div class="flex flex-wrap gap-2.5">
+                <span class="flex items-center gap-1 text-xs text-text-tertiary">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                  {{ evt.location }}
+                </span>
+              </div>
+              <div class="flex items-center justify-between mt-auto pt-2 border-t border-border-light">
+                <span class="text-sm font-bold text-text-primary">{{ evt.date ? new Date(evt.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : '' }}</span>
+              </div>
+            </div>
+          </NuxtLink>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── "Vous aimerez aussi" : events de meme categorie ou meme ville ─── -->
+    <section v-if="similarEvents.length > 0" class="bg-white py-12 px-10 border-t border-border-light max-md:py-9 max-md:px-6 max-sm:px-4">
+      <div class="max-w-[1100px] mx-auto">
+        <div class="flex items-end justify-between mb-6 flex-wrap gap-3">
+          <div>
+            <div class="text-sm font-semibold text-orange-primary mb-2">Vous aimerez aussi</div>
+            <h2 class="font-serif text-xl text-text-primary">Découvrez d'autres événements similaires</h2>
+          </div>
+          <NuxtLink to="/events" class="text-sm font-bold text-orange-primary hover:underline shrink-0">
+            Voir tout →
+          </NuxtLink>
+        </div>
+        <div class="grid grid-cols-3 gap-5 max-md:grid-cols-1 max-md:gap-4">
+          <NuxtLink v-for="evt in similarEvents" :key="evt.id" :to="`/events/${evt.slug || evt.id}`" class="bg-bg-primary border border-border-light rounded-xl overflow-hidden flex flex-col transition-all duration-200 cursor-pointer no-underline hover:border-orange-primary">
+            <div class="h-[120px] relative overflow-hidden shrink-0 bg-bg-secondary">
+              <NuxtImg v-if="evt.image" :src="evt.image" :alt="evt.title" class="w-full h-full object-cover" loading="lazy" :placeholder="[20, 20]" />
+              <div v-else class="w-full h-full flex items-center justify-center">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-text-tertiary"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              </div>
+            </div>
+            <div class="p-4 flex flex-col gap-2 flex-1">
+              <div class="text-sm font-semibold text-text-primary leading-snug line-clamp-2">{{ evt.title }}</div>
+              <div v-if="evt.location" class="flex items-center gap-1 text-xs text-text-tertiary">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                {{ evt.location }}
+              </div>
+              <div class="flex items-center justify-between mt-auto pt-2 border-t border-border-light">
+                <span class="text-xs font-bold text-text-primary">{{ evt.date ? new Date(evt.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : '' }}</span>
+                <span class="text-xs font-bold text-orange-primary">{{ evt.minPrice === 0 ? 'Gratuit' : (evt.minPrice ? formatPrice(evt.minPrice) : '') }}</span>
+              </div>
+            </div>
+          </NuxtLink>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── Floating CTA (desktop/tablet) ──────────────────── -->
+    <!-- FAB shown when nothing selected yet — md:flex only, the mobile sticky
+         bar below handles small viewports. Gated by invitation for private
+         events so private leakage cannot be triggered from this control. -->
+    <button
+      v-if="event && !isPast && !isSoldOut && !isLibre && totalQuantity === 0 && (!isPrivate || inviteVerified)"
+      type="button"
+      class="hidden md:inline-flex fixed bottom-6 right-6 z-[150] px-5 py-3 rounded-full text-sm font-semibold bg-orange-primary text-white hover:bg-orange-light transition-all items-center gap-2 shadow-lg shadow-orange-primary/30 animate-fade-in-up"
+      @click="scrollToTickets"
+    >
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/>
+      </svg>
+      {{ isInscription ? "S'inscrire" : 'Acheter un billet' }}
+    </button>
 
     <!-- ─── Sticky bottom CTA (mobile) ─────────────────────── -->
     <div
