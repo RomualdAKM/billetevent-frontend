@@ -24,8 +24,10 @@ const {
   isInscription,
   initFromHistoryState,
   loadEventDetails,
+  ensureAuthValid,
   isGuest,
   guestInfo,
+  sessionInvalid,
   paymentState,
   isProcessing,
   paymentMode,
@@ -63,6 +65,10 @@ const { initPixels, trackInitiateCheckout } = useTracking()
 
 initFromHistoryState()
 onMounted(async () => {
+  // Vérifier que le token Sanctum est encore valide côté backend AVANT
+  // de laisser l'utilisateur soumettre — sinon il prend un 422 mystérieux
+  // sur guest_* alors que le formulaire identité n'est même pas affiché.
+  await ensureAuthValid()
   await loadEventDetails()
 
   // Tracking pixels : tracker le début du checkout
@@ -212,6 +218,17 @@ const operatorOptions = computed(() =>
         <!-- Form column -->
         <div class="order-last md:order-first flex flex-col gap-8">
 
+          <!-- Bandeau session expirée : informer l'utilisateur qu'il a été
+               basculé en guest et lui proposer de se reconnecter sans perdre
+               son panier. -->
+          <div v-if="sessionInvalid" class="bg-gold-dim border border-gold/40 rounded-lg px-4 py-3 flex items-start gap-2.5">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gold shrink-0 mt-0.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <div class="flex-1 text-sm text-text-secondary leading-relaxed">
+              <strong class="text-text-primary">Votre session a expiré.</strong> Vous pouvez finaliser votre commande sans recréer de compte, ou
+              <NuxtLink :to="{ path: '/auth/login', query: { redirect: '/checkout' } }" class="text-orange-primary font-medium hover:underline">vous reconnecter</NuxtLink>.
+            </div>
+          </div>
+
           <!-- Section: Guest buyer identity (unauthenticated checkout) -->
           <div v-if="isGuest" class="flex flex-col gap-4">
             <div>
@@ -219,6 +236,7 @@ const operatorOptions = computed(() =>
               <p class="text-sm text-text-secondary mt-1">
                 Vous recevrez vos billets à cette adresse email.
                 <NuxtLink
+                  v-if="!sessionInvalid"
                   :to="{ path: '/auth/login', query: { redirect: '/checkout' } }"
                   class="text-orange-primary font-medium hover:underline"
                 >Déjà un compte ? Se connecter</NuxtLink>

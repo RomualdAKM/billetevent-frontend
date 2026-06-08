@@ -133,7 +133,7 @@ const legendItems = [
 
     <div class="grid grid-cols-2 gap-9 max-w-[1080px] mx-auto max-md:grid-cols-1 max-md:max-w-[520px]">
       <div v-for="(ticket, i) in tickets" :key="i" class="flex flex-col gap-3.5">
-        <div class="text-[0.68rem] font-bold tracking-[0.12em] uppercase text-text-tertiary pl-1">{{ ticket.typeLabel }}</div>
+        <div class="text-xs font-medium text-text-tertiary pl-1">{{ ticket.typeLabel }}</div>
 
         <div class="w-full rounded-xl bg-surface overflow-hidden">
           <div class="rounded-t-xl overflow-hidden">

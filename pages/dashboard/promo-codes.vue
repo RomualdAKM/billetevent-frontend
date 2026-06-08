@@ -13,6 +13,12 @@ const codeCopied = ref<string | null>(null)
 
 const newCode = ref({ code: '', type: 'percentage', value: '', event: '', limit: '', expiresAt: '', minOrderAmount: '', maxPerUser: '' })
 
+// Min date d'expiration = demain (un code qui expire aujourd'hui n'a aucun sens)
+const minExpiresAt = computed(() => {
+  const d = new Date(Date.now() + 24 * 60 * 60 * 1000)
+  return d.toISOString().slice(0, 10)
+})
+
 const promoCodes = ref<any[]>([])
 const events = ref<any[]>([])
 
@@ -299,6 +305,7 @@ const formatDate = (dateStr: string | null) => {
             <input
               v-model="newCode.expiresAt"
               type="date"
+              :min="minExpiresAt"
               class="py-3 px-4 rounded-lg border border-border-light bg-surface text-sm text-text-primary outline-none w-full transition-all focus:border-orange-primary"
             />
           </div>

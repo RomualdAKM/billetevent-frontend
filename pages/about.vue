@@ -9,7 +9,7 @@ useSeoMeta({
 const missions = [
   {
     title: 'Simplifier la publication',
-    desc: 'Nous rendons la création et la publication de vos événements aussi simple que possible, en quelques clics.',
+    desc: 'Publier un événement ne devrait pas demander un master en informatique. On enlève les frictions, vous gardez le contrôle.',
     icon: 'rocket',
   },
   {
@@ -59,7 +59,7 @@ const partners: string[] = []
     <section class="bg-bg-primary">
       <div class="px-5 md:px-10 pt-20 pb-16 max-w-[1200px] mx-auto text-center">
         <h1 class="font-serif text-4xl md:text-5xl text-blue-main leading-tight mb-5">
-          Bien plus que de la billetterie,<br />une <em class="italic text-orange-primary">expérience</em>
+          Bien plus que de la billetterie,<br />une expérience
         </h1>
         <p class="text-text-secondary text-lg max-w-[640px] mx-auto leading-relaxed">
           BilletEvent accompagne les organisateurs d'événements avec une plateforme complète et fiable, conçue pour l'Afrique. De la création à la vente, nous simplifions chaque étape.
@@ -165,7 +165,7 @@ const partners: string[] = []
         <div class="px-5 md:px-14 py-16 md:py-20 bg-bg-secondary max-w-[1200px] mx-auto rounded-xl">
           <div class="max-w-[700px] mx-auto text-center">
             <h2 class="font-serif text-3xl md:text-4xl leading-tight text-text-primary mb-4 tracking-tight">
-              Prêt à lancer<br />votre <em class="italic text-orange-primary">événement ?</em>
+              Prêt à lancer<br />votre événement ?
             </h2>
             <p class="text-base text-text-secondary mb-9 leading-relaxed">
               Rejoignez les milliers d'organisateurs qui font confiance à BilletEvent pour créer et vendre leurs événements.

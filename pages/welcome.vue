@@ -30,14 +30,14 @@ const allowNotifications = ref(true)
 
 const cities = ['Dakar', 'Abidjan', 'Cotonou', 'Lomé', 'Douala', 'Bamako', 'Ouagadougou', 'Conakry']
 const categories = [
-  { slug: 'musique', label: 'Musique', icon: '🎤' },
-  { slug: 'business', label: 'Business', icon: '💼' },
-  { slug: 'art', label: 'Art & Culture', icon: '🎨' },
-  { slug: 'sport', label: 'Sport', icon: '⚽' },
-  { slug: 'formation', label: 'Formation', icon: '📚' },
-  { slug: 'tech', label: 'Tech', icon: '💻' },
-  { slug: 'gastronomie', label: 'Gastronomie', icon: '🍽️' },
-  { slug: 'autre', label: 'Autre', icon: '🎉' },
+  { slug: 'musique', label: 'Musique' },
+  { slug: 'business', label: 'Business' },
+  { slug: 'art', label: 'Art & Culture' },
+  { slug: 'sport', label: 'Sport' },
+  { slug: 'formation', label: 'Formation' },
+  { slug: 'tech', label: 'Tech' },
+  { slug: 'gastronomie', label: 'Gastronomie' },
+  { slug: 'autre', label: 'Autre' },
 ]
 
 function toggleCategory(slug: string) {
@@ -126,12 +126,11 @@ function skipAll() {
             v-for="cat in categories"
             :key="cat.slug"
             type="button"
-            class="px-4 py-3 rounded-lg text-sm font-semibold border transition-colors flex items-center gap-2"
+            class="px-4 py-3 rounded-lg text-sm font-semibold border transition-colors"
             :class="selectedCategories.includes(cat.slug) ? 'bg-orange-primary text-white border-orange-primary' : 'bg-surface border-border-light text-text-primary hover:border-orange-primary'"
             @click="toggleCategory(cat.slug)"
           >
-            <span>{{ cat.icon }}</span>
-            <span>{{ cat.label }}</span>
+            {{ cat.label }}
           </button>
         </div>
         <div class="flex items-center justify-between">

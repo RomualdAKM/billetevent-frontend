@@ -21,7 +21,7 @@ function selectTicket(index) {
 <template>
   <div class="bg-surface border border-border-light rounded-[20px] overflow-hidden">
     <div class="px-6 pt-5 pb-4">
-      <div class="text-[0.68rem] font-bold tracking-[0.12em] uppercase text-text-tertiary mb-1">Réserver ma place</div>
+      <div class="text-sm font-semibold text-text-secondary mb-1">Réserver ma place</div>
       <div class="font-serif text-[1.1rem] text-text-primary">{{ eventName }}</div>
     </div>
     <div class="h-px bg-border-light"></div>

@@ -12,6 +12,25 @@ const docLoading = ref(false)
 const firstName = ref('')
 const lastName = ref('')
 const birthDate = ref('')
+
+// Contraintes naissance : ≤ aujourd'hui - 18 ans (KYC = retraits → adulte requis)
+// + ≥ aujourd'hui - 120 ans (limite raisonnable, évite les fautes de frappe genre 1820).
+const maxBirthDateIso = computed(() => {
+  const d = new Date()
+  d.setFullYear(d.getFullYear() - 18)
+  return d.toISOString().slice(0, 10)
+})
+const minBirthDateIso = computed(() => {
+  const d = new Date()
+  d.setFullYear(d.getFullYear() - 120)
+  return d.toISOString().slice(0, 10)
+})
+const birthDateError = computed(() => {
+  if (!birthDate.value) return ''
+  if (birthDate.value > maxBirthDateIso.value) return 'Vous devez avoir au moins 18 ans pour activer les reversements.'
+  if (birthDate.value < minBirthDateIso.value) return 'Date de naissance invalide.'
+  return ''
+})
 const userEmail = ref('')
 const identityValidatedByBackend = ref(false)
 
@@ -287,8 +306,9 @@ onMounted(() => { loadKyc() })
           </div>
           <div class="mt-4">
             <label class="block text-xs font-medium text-text-secondary mb-1.5">Date de naissance</label>
-            <input v-model="birthDate" type="date"
+            <input v-model="birthDate" type="date" :min="minBirthDateIso" :max="maxBirthDateIso"
               class="w-full px-3 py-2.5 rounded-lg border border-border-light text-text-primary text-sm bg-bg-primary focus:outline-none focus:ring-1 focus:ring-orange-primary/40 focus:border-orange-primary transition" />
+            <p v-if="birthDateError" class="text-xs text-red-error mt-1">{{ birthDateError }}</p>
           </div>
           <div class="flex justify-end mt-4 gap-2">
             <button v-if="identityEditing && identityComplete"

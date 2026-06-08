@@ -24,12 +24,45 @@ export const useCheckout = () => {
   // ── Buyer identity (guest checkout) ──
   // When the user is not logged in, the backend auto-creates a buyer account
   // from these fields and links the order to it.
-  const isGuest = computed(() => !authStore.isLoggedIn)
+  //
+  // `sessionInvalid` est mis à true si le backend rejette le token au mount
+  // (token Sanctum expiré mais encore présent dans localStorage). Dans ce cas
+  // on bascule la page en mode guest pour afficher le formulaire identité et
+  // permettre au user de finaliser sa commande au lieu de bloquer sur un 422.
+  const sessionInvalid = ref(false)
+  const isGuest = computed(() => !authStore.isLoggedIn || sessionInvalid.value)
   const guestInfo = ref({
     name: '',
     email: '',
     phone: '',
   })
+
+  /**
+   * Vérifie que la session backend est encore valide. À appeler au mount de
+   * /checkout pour éviter de soumettre une commande qui sera rejetée en 422
+   * parce que le token Sanctum a expiré côté serveur.
+   */
+  async function ensureAuthValid() {
+    if (!authStore.isLoggedIn) return
+    try {
+      await authStore.fetchUser()
+      sessionInvalid.value = false
+    } catch (err: any) {
+      if (err?.status === 401 || err?.response?.status === 401) {
+        // Token expiré → bascule en guest, on garde le pré-remplissage si l'user
+        // avait été partiellement chargé en mémoire.
+        sessionInvalid.value = true
+        if (authStore.user) {
+          const u = authStore.user as Record<string, any>
+          const fullName = [u.first_name, u.last_name].filter(Boolean).join(' ').trim()
+          if (fullName) guestInfo.value.name = fullName
+          if (u.email) guestInfo.value.email = String(u.email)
+          if (u.phone) guestInfo.value.phone = String(u.phone)
+        }
+        authStore.logout()
+      }
+    }
+  }
 
   // ── Registration data (inscription mode) ──
   const registrationData = ref({
@@ -472,11 +505,13 @@ export const useCheckout = () => {
     isFreeEvent,
     initFromHistoryState,
     loadEventDetails,
+    ensureAuthValid,
     registrationData,
 
     // Guest buyer identity
     isGuest,
     guestInfo,
+    sessionInvalid,
 
     // Payment state
     paymentState,

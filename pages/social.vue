@@ -52,7 +52,7 @@ const socials = [
     <section class="bg-bg-primary">
       <div class="px-5 md:px-10 pt-20 pb-16 max-w-[1200px] mx-auto text-center">
         <h1 class="font-serif text-4xl md:text-5xl text-text-primary leading-tight mb-5">
-          Retrouvez-nous sur <em class="italic text-orange-primary">les reseaux</em>
+          Retrouvez-nous sur les réseaux
         </h1>
         <p class="text-text-secondary text-lg max-w-[600px] mx-auto leading-relaxed">
           Suivez-nous pour ne rien manquer de nos actualites, coulisses et bons plans evenementiels.

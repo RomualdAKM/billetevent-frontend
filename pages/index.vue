@@ -111,13 +111,13 @@ const faqItems = [
       <div class="px-5 md:px-10 pt-5 pb-10 max-w-[1200px] mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-15 items-center">
         <div>
           <h1 class="font-serif text-[2.2rem] sm:text-[2.8rem] lg:text-[3.4rem] leading-[1.1] text-text-primary mb-5 tracking-tight">
-            Vivez vos prochains <em class="italic text-orange-primary">événements</em><br />
-            sans tracas
+            Trouvez votre prochain événement.<br />
+            Payez en mobile money.
           </h1>
           <p class="text-base text-text-tertiary leading-[1.7] mb-7 max-w-[460px]">
-            Concerts, conférences, soirées, formations — tout ce qui se passe près de chez vous, en quelques tapes.
-            <span class="block mt-1 text-text-secondary">Vous êtes organisateur ?
-              <NuxtLink to="/dashboard/events/quick" class="text-orange-primary font-semibold hover:underline">Publiez un événement en 2 min →</NuxtLink>
+            Des concerts d'Akon aux conférences tech de Dakar, en passant par les soirées du week-end à Cotonou — votre billet est dans votre poche, scanné à la porte, sans file d'attente.
+            <span class="block mt-3 text-text-secondary">Vous êtes organisateur ?
+              <NuxtLink to="/dashboard/events/quick" class="text-orange-primary font-semibold hover:underline">Publier un événement →</NuxtLink>
             </span>
           </p>
 
@@ -177,7 +177,7 @@ const faqItems = [
       <div class="py-12 md:py-16 px-5 md:px-10 max-w-[1200px] mx-auto">
         <div class="flex items-end justify-between mb-6 flex-wrap gap-3">
           <div>
-            <div class="text-[0.7rem] font-bold tracking-[0.12em] uppercase text-orange-primary mb-2">À la une</div>
+            <div class="text-sm font-semibold text-orange-primary mb-2">À la une</div>
             <h2 class="font-serif text-[1.6rem] md:text-[2rem] leading-tight text-text-primary">Événements en vedette</h2>
           </div>
           <NuxtLink to="/events" class="text-sm font-bold text-orange-primary hover:underline shrink-0">
@@ -208,8 +208,8 @@ const faqItems = [
     <section id="fonctionnalites">
       <div class="py-16 md:py-20 px-5 md:px-10 max-w-[1100px] mx-auto">
         <div class="mb-10">
-          <h2 class="font-serif text-[1.8rem] md:text-[2.2rem] leading-[1.2] text-text-primary mb-2.5">Tout ce dont vous avez besoin<br />pour organiser vos événements</h2>
-          <p class="text-[0.92rem] text-text-tertiary leading-[1.7] max-w-[520px]">Créez vos pages événements, vendez vos billets et gérez vos participants depuis une plateforme simple et puissante.</p>
+          <h2 class="font-serif text-[1.8rem] md:text-[2.2rem] leading-[1.2] text-text-primary mb-2.5">Une billetterie pensée<br />pour le terrain</h2>
+          <p class="text-[0.92rem] text-text-tertiary leading-[1.7] max-w-[520px]">Pages événements, paiement mobile money, scan QR au portier, reversements Wave ou virement : tout est conçu pour le contexte africain.</p>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div
@@ -230,10 +230,10 @@ const faqItems = [
     </section>
 
     <section>
-      <div class="py-24 px-5 md:px-10 bg-white">
+      <div class="py-14 md:py-20 px-5 md:px-10 bg-white">
         <div class="max-w-[1200px] mx-auto">
           <div class="text-center max-w-[560px] mx-auto">
-            <div class="text-[0.7rem] font-bold tracking-[0.12em] uppercase text-orange-primary mb-2.5 flex items-center justify-center gap-2">Comment ça marche</div>
+            <div class="text-sm font-semibold text-orange-primary mb-2.5 flex items-center justify-center gap-2">Comment ça marche</div>
             <h2 class="font-serif text-[1.8rem] md:text-[2.2rem] leading-[1.2] text-text-primary mb-3.5">Créez, publiez et vendez<br />en quelques étapes simples</h2>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mt-14 relative">
@@ -255,12 +255,12 @@ const faqItems = [
     </section>
 
     <section>
-      <div class="py-24 px-5 md:px-10 max-w-[1100px] mx-auto text-center">
-        <div class="text-[0.7rem] font-bold tracking-[0.12em] uppercase text-orange-primary mb-2.5 flex items-center justify-center gap-2">
+      <div class="py-28 md:py-32 px-5 md:px-10 max-w-[1100px] mx-auto text-center">
+        <div class="text-sm font-semibold text-orange-primary mb-2.5 flex items-center justify-center gap-2">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-          Dashboard
+          Tableau de bord
         </div>
-        <h2 class="font-serif text-[1.8rem] md:text-[2.2rem] leading-[1.2] text-text-primary mb-3.5 text-center">Suivez tout d'un<br /><em class="italic text-orange-primary">coup d'oeil</em></h2>
+        <h2 class="font-serif text-[1.8rem] md:text-[2.2rem] leading-[1.2] text-text-primary mb-3.5 text-center">Suivez tout d'un coup d'oeil</h2>
         <p class="text-[0.92rem] text-text-tertiary leading-[1.7] max-w-[520px] mx-auto mb-12 text-center">Gerez vos evenements, suivez vos ventes et analysez vos performances depuis un tableau de bord intuitif.</p>
 
         <div class="bg-white rounded-[20px] border border-border-light overflow-hidden">
@@ -640,8 +640,8 @@ const faqItems = [
     </section>
 
     <section id="types">
-      <div class="py-24 px-5 md:px-10 max-w-[1200px] mx-auto">
-        <div class="text-[0.7rem] font-bold tracking-[0.12em] uppercase text-orange-primary mb-2.5 flex items-center gap-2">Types d'événements</div>
+      <div class="py-16 md:py-24 px-5 md:px-10 max-w-[1200px] mx-auto">
+        <div class="text-sm font-semibold text-orange-primary mb-2.5 flex items-center gap-2">Types d'événements</div>
         <h2 class="font-serif text-[1.8rem] md:text-[2.2rem] leading-[1.2] text-text-primary mb-3.5">Une plateforme adaptée<br />à tous vos événements</h2>
         <p class="text-[0.92rem] text-text-tertiary leading-[1.7] max-w-[520px]">Que votre événement soit présentiel ou en ligne, payant ou gratuit, BilletEvent s'adapte à toutes les situations.</p>
 
@@ -667,10 +667,10 @@ const faqItems = [
     </section>
 
     <section v-if="testimonials.length > 0" id="temoignages">
-      <div class="py-24 px-5 md:px-10 bg-white">
+      <div class="py-20 md:py-28 px-5 md:px-10 bg-white">
         <div class="max-w-[1100px] mx-auto">
           <div class="text-center mb-12">
-            <div class="text-[0.7rem] font-bold tracking-[0.12em] uppercase text-orange-primary mb-2.5 flex items-center justify-center gap-2">Témoignages clients</div>
+            <div class="text-sm font-semibold text-orange-primary mb-2.5 flex items-center justify-center gap-2">Ils nous font confiance</div>
             <h2 class="font-serif text-[1.8rem] md:text-[2.2rem] leading-[1.2] text-text-primary mb-3.5">Une plateforme conçue<br />pour <em class="italic text-text-primary">vos événements</em></h2>
             <p class="text-[0.92rem] text-text-tertiary leading-[1.7] max-w-[520px] mx-auto text-center">BilletEvent vous permet de créer, organiser, gérer et vendre des événements de tous types.</p>
           </div>
@@ -707,11 +707,11 @@ const faqItems = [
     </section>
 
     <section id="faq">
-      <div class="py-24 px-5 md:px-10 max-w-[800px] mx-auto">
+      <div class="py-12 md:py-20 px-5 md:px-10 max-w-[800px] mx-auto">
         <div class="text-center mb-0">
-          <div class="text-[0.7rem] font-bold tracking-[0.12em] uppercase text-orange-primary mb-2.5 flex items-center justify-center gap-2">Questions fréquentes</div>
+          <div class="text-sm font-semibold text-orange-primary mb-2.5 flex items-center justify-center gap-2">Questions fréquentes</div>
           <h2 class="font-serif text-[1.8rem] md:text-[2.2rem] leading-[1.2] text-text-primary mb-3.5">Tout ce que vous voulez savoir</h2>
-          <p class="text-[0.92rem] text-text-tertiary leading-[1.7] max-w-[520px] mx-auto">Tout ce qu'il faut savoir pour organiser et vendre vos événements avec BilletEvent.</p>
+          <p class="text-[0.92rem] text-text-tertiary leading-[1.7] max-w-[520px] mx-auto">Les questions que vous nous posez le plus souvent sur la plateforme et nos services.</p>
         </div>
         <div class="mt-12 flex flex-col">
           <div v-for="(faq, i) in faqItems" :key="i" class="border-b border-border-light" :class="{ 'border-t': i === 0 }">

@@ -223,7 +223,7 @@ const resetFilters = () => {
       <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-8">
         <div>
           <h1 class="font-serif text-3xl md:text-4xl leading-tight text-text-primary mb-2">Tous les événements</h1>
-          <p class="text-sm text-text-tertiary">Découvrez et réservez vos billets en quelques clics.</p>
+          <p class="text-sm text-text-tertiary">Concerts, conférences, formations et soirées près de chez vous.</p>
         </div>
         <div class="relative w-full md:w-[320px]">
           <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-tertiary" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>

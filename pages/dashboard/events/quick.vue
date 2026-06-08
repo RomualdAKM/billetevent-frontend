@@ -39,6 +39,18 @@ const categories = [
   { slug: 'autre', label: 'Autre' },
 ]
 
+// Date/heure mini = maintenant + 1h (pas de création d'event "dans le passé" ni
+// "dans 5 min" qui n'aurait pas le temps d'être promu).
+const minDateTimeIso = computed(() => {
+  const d = new Date(Date.now() + 60 * 60 * 1000) // +1h
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  const h = String(d.getHours()).padStart(2, '0')
+  const min = String(d.getMinutes()).padStart(2, '0')
+  return `${y}-${m}-${day}T${h}:${min}`
+})
+
 function onFlyerSelect(e: Event) {
   const f = (e.target as HTMLInputElement).files?.[0]
   if (f) flyer.value = f
@@ -48,6 +60,7 @@ function validate(): boolean {
   errors.value = {}
   if (!title.value.trim() || title.value.trim().length < 4) errors.value.title = 'Titre requis (min. 4 caractères)'
   if (!dateStart.value) errors.value.date_start = 'Date et heure requises'
+  else if (new Date(dateStart.value).getTime() < Date.now()) errors.value.date_start = 'La date doit être dans le futur'
   if (!venue.value.trim()) errors.value.venue = 'Lieu requis'
   if (!city.value.trim()) errors.value.city = 'Ville requise'
   if (!capacity.value || capacity.value < 1) errors.value.capacity = 'Capacité requise (≥ 1)'
@@ -55,7 +68,7 @@ function validate(): boolean {
   return Object.keys(errors.value).length === 0
 }
 
-async function submit() {
+async function submit(publishNow: boolean = true) {
   if (!validate()) {
     notifyError('Vérifiez les champs requis')
     scrollToFirstError(errors.value)
@@ -85,11 +98,20 @@ async function submit() {
       fd.append('passes[0][price]', '0')
       fd.append('passes[0][quantity]', String(capacity.value))
     }
+    // Le backend (EventController:226) lit `publish=1` et passe le status à
+    // Published si au moins un pass est attaché — ce qui est notre cas.
+    if (publishNow) fd.append('publish', '1')
 
     const res: any = await api.createEvent(fd)
     const created = res?.data ?? res
-    success('Brouillon créé ! Vous pouvez maintenant enrichir et publier.')
-    router.push(`/dashboard/events/create?edit=${created.id}`)
+    if (publishNow) {
+      success('Événement créé et publié.')
+      // Direction : hub event pour pouvoir partager le lien tout de suite
+      router.push(`/dashboard/events/${created.id}`)
+    } else {
+      success('Brouillon créé. Vous pourrez le publier après l\'avoir enrichi.')
+      router.push(`/dashboard/events/create?edit=${created.id}`)
+    }
   } catch (err: any) {
     if (err?.errors) {
       errors.value = Object.fromEntries(Object.entries(err.errors).map(([k, v]: any) => [k, Array.isArray(v) ? v[0] : v]))
@@ -110,8 +132,8 @@ function cls(field: string) {
 <template>
   <div class="max-w-xl mx-auto px-4 py-6">
     <div class="mb-5">
-      <div class="text-[0.7rem] font-bold tracking-[0.12em] uppercase text-orange-primary mb-1.5">Création rapide</div>
-      <h1 class="font-serif text-2xl text-text-primary mb-1">Publiez en 2 minutes ⚡</h1>
+      <div class="text-sm font-semibold text-orange-primary mb-1.5">Création rapide</div>
+      <h1 class="font-serif text-2xl text-text-primary mb-1">Publiez en 2 minutes</h1>
       <p class="text-sm text-text-secondary">L'essentiel pour démarrer. Vous pourrez enrichir après (programme, artistes, FAQ…).</p>
     </div>
 
@@ -127,7 +149,7 @@ function cls(field: string) {
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label class="block text-xs font-bold uppercase tracking-wide text-text-tertiary mb-1.5">Date et heure *</label>
-          <input v-model="dateStart" name="date_start" type="datetime-local" :class="cls('date_start')" @input="errors.date_start = ''" />
+          <input v-model="dateStart" name="date_start" type="datetime-local" :min="minDateTimeIso" :class="cls('date_start')" @input="errors.date_start = ''" />
           <p v-if="errors.date_start" class="text-xs text-red-error mt-1">{{ errors.date_start }}</p>
         </div>
         <div>
@@ -189,7 +211,7 @@ function cls(field: string) {
           J'ai besoin d'options avancées
         </NuxtLink>
         <button type="submit" :disabled="saving" class="flex-[2] inline-flex items-center justify-center px-5 py-3 rounded-full text-sm font-bold bg-orange-primary text-white hover:bg-orange-light transition-colors disabled:opacity-60">
-          {{ saving ? 'Création…' : 'Créer le brouillon ⚡' }}
+          {{ saving ? 'Création…' : 'Créer le brouillon' }}
         </button>
       </div>
     </form>

@@ -11,7 +11,7 @@ const features = [
   // { title: 'Points de vente', desc: 'Activez la vente physique via notre réseau de points de vente partenaires.', icon: 'store' },
   { title: 'Vente WhatsApp', desc: 'Partagez un lien direct vers vos billets sur WhatsApp et vendez instantanément.', icon: 'whatsapp' },
   // { title: 'Impression de billets', desc: 'Générez des billets physiques et électroniques avec des QR codes uniques.', icon: 'print' },
-  { title: 'Billets d\'invitation', desc: 'Créez des invitations VIP, presse ou partenaires en quelques clics.', icon: 'vip' },
+  { title: 'Billets d\'invitation', desc: 'Invitez vos VIP, votre presse ou vos partenaires avec des billets nominatifs gratuits.', icon: 'vip' },
   { title: 'Validateur QR code', desc: 'Scannez et validez les billets le jour J depuis votre smartphone.', icon: 'qr' },
   { title: 'Campagne email', desc: 'Envoyez des emails ciblés pour promouvoir vos événements.', icon: 'mail' },
   // { title: 'Campagne SMS', desc: 'Atteignez votre audience directement via des campagnes SMS personnalisées.', icon: 'sms' },
@@ -45,7 +45,7 @@ const partners: string[] = []
     <section class="bg-bg-primary">
       <div class="px-5 md:px-10 pt-20 pb-16 max-w-[1200px] mx-auto text-center">
         <h1 class="font-serif text-4xl md:text-5xl text-blue-main leading-tight mb-5">
-          Nous croyons en votre <em class="italic text-orange-primary">succès !</em>
+          Nous croyons en votre succès.
         </h1>
         <p class="text-text-secondary text-lg max-w-[560px] mx-auto leading-relaxed">
           Pas de frais fixes, pas de surprises. Une tarification simple et transparente pour tous les organisateurs.
@@ -69,7 +69,7 @@ const partners: string[] = []
       <div class="px-5 md:px-10 py-20 max-w-[1200px] mx-auto">
         <div class="text-center mb-14">
           <div class="text-xs font-bold tracking-widest uppercase text-orange-primary mb-2.5">Fonctionnalités</div>
-          <h2 class="font-serif text-3xl md:text-4xl leading-tight text-text-primary">Tout ce dont vous avez besoin</h2>
+          <h2 class="font-serif text-3xl md:text-4xl leading-tight text-text-primary">Ce que vous obtenez</h2>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div v-for="(f, i) in features" :key="i" class="border border-border-light rounded-xl p-6 transition-colors duration-200 hover:border-orange-primary/30">
@@ -155,7 +155,7 @@ const partners: string[] = []
         <div class="px-5 md:px-14 py-16 md:py-20 bg-bg-secondary max-w-[1200px] mx-auto rounded-xl">
           <div class="max-w-[700px] mx-auto text-center">
             <h2 class="font-serif text-3xl md:text-4xl leading-tight text-text-primary mb-4 tracking-tight">
-              Prêt à <em class="italic text-orange-primary">commencer ?</em>
+              Prêt à commencer ?
             </h2>
             <p class="text-base text-text-secondary mb-9 leading-relaxed">
               Créez votre premier événement gratuitement et ne payez que sur le succès.

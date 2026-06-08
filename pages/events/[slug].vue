@@ -792,7 +792,7 @@ watchEffect(() => {
 
         <div v-else id="billets" class="bg-surface border border-border-light rounded-xl  overflow-hidden">
           <div class="px-6 pt-5 pb-4">
-            <div class="text-xs font-bold tracking-[0.12em] uppercase text-text-tertiary mb-1">{{ isInscription ? "S'inscrire" : 'Réserver ma place' }}</div>
+            <div class="text-sm font-semibold text-text-secondary mb-1">{{ isInscription ? "S'inscrire" : 'Réserver ma place' }}</div>
             <div class="font-serif text-base text-text-primary">{{ isInscription ? 'Inscription gratuite' : 'Choisissez vos billets' }}</div>
           </div>
           <div class="h-px bg-border-light"></div>
@@ -960,7 +960,7 @@ watchEffect(() => {
         </div>
 
         <div v-if="pointsDeVente.length > 0" class="bg-surface border border-border-light rounded-xl p-5 ">
-          <div class="text-xs font-bold tracking-[0.12em] uppercase text-text-tertiary mb-3.5">Où acheter votre billet en personne</div>
+          <div class="text-sm font-semibold text-text-secondary mb-3.5">Où acheter votre billet en personne</div>
           <div class="flex flex-col gap-3">
             <div v-for="(pdv, i) in pointsDeVente" :key="i" class="flex items-start gap-3.5 p-3.5 bg-bg-primary rounded-lg border border-border-light">
               <div class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" :class="pdv.typeColor === 'orange' ? 'bg-orange-dim text-orange-primary' : 'bg-blue-dim text-ink2'">
@@ -984,7 +984,7 @@ watchEffect(() => {
         </div>
 
         <div id="faq" class="bg-surface border border-border-light rounded-xl p-5 ">
-          <div class="text-xs font-bold tracking-[0.12em] uppercase text-text-tertiary mb-3.5">Questions fréquentes</div>
+          <div class="text-sm font-semibold text-text-secondary mb-3.5">Questions fréquentes</div>
           <div v-for="(item, i) in faqItems" :key="i" class="border-b border-border-light last:border-b-0">
             <button class="w-full bg-transparent border-none text-left py-[13px] cursor-pointer flex justify-between items-center font-sans text-[0.84rem] font-medium text-text-primary gap-2.5" :aria-expanded="item.open" @click="toggleFaq(i)">
               {{ item.q }}
@@ -1044,7 +1044,7 @@ watchEffect(() => {
       <div class="max-w-[1100px] mx-auto">
         <div class="flex items-end justify-between mb-6 flex-wrap gap-3">
           <div>
-            <div class="text-[0.7rem] font-bold tracking-[0.12em] uppercase text-orange-primary mb-2">Vous aimerez aussi</div>
+            <div class="text-sm font-semibold text-orange-primary mb-2">Vous aimerez aussi</div>
             <h2 class="font-serif text-xl text-text-primary">Découvrez d'autres événements similaires</h2>
           </div>
           <NuxtLink to="/events" class="text-sm font-bold text-orange-primary hover:underline shrink-0">

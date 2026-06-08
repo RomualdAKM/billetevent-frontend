@@ -60,7 +60,7 @@ const steps = computed(() => [
     title: 'Validez votre identité (KYC)',
     description: 'Obligatoire pour retirer vos revenus. Pièce d\'identité + un justificatif suffit.',
     done: kycDone.value,
-    actionLabel: kycDone.value ? 'KYC validé ✓' : 'Compléter mon KYC',
+    actionLabel: kycDone.value ? 'KYC validé' : 'Compléter mon KYC',
     to: '/dashboard/kyc',
   },
   {
@@ -97,8 +97,8 @@ function skipOnboarding() {
 <template>
   <div class="max-w-3xl mx-auto px-4 py-6">
     <div class="mb-6">
-      <div class="text-[0.7rem] font-bold tracking-[0.12em] uppercase text-orange-primary mb-2">Bienvenue parmi les organisateurs</div>
-      <h1 class="font-serif text-2xl md:text-3xl text-text-primary mb-2">Bonjour {{ (authStore.user as any)?.first_name || 'à vous' }} 👋</h1>
+      <div class="text-sm font-semibold text-orange-primary mb-2">Bienvenue parmi les organisateurs</div>
+      <h1 class="font-serif text-2xl md:text-3xl text-text-primary mb-2">Bonjour {{ (authStore.user as any)?.first_name || 'à vous' }}</h1>
       <p class="text-sm text-text-secondary">Voici les 4 étapes pour démarrer sur BilletEvent. Vous pouvez les faire dans l'ordre que vous voulez.</p>
     </div>
 

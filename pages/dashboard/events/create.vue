@@ -32,6 +32,41 @@ const eventDate = ref('')
 const eventTime = ref('')
 const eventEndTime = ref('')
 const eventEndDate = ref('')
+
+// Min date = aujourd'hui (empêche la sélection de dates passées au niveau navigateur).
+// Le format ISO YYYY-MM-DD est ce qu'attend l'attribut HTML5 `min` des input[type=date].
+const todayIso = computed(() => {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+})
+// Min de la date de fin = date de début (sinon today)
+const minEndDate = computed(() => eventDate.value || todayIso.value)
+// Pour les inputs datetime-local des passes (sale_start_date / sale_end_date) :
+// min = maintenant, max = date+heure de l'événement (vendre après l'event = absurde)
+const nowDateTimeIso = computed(() => {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  const h = String(d.getHours()).padStart(2, '0')
+  const min = String(d.getMinutes()).padStart(2, '0')
+  return `${y}-${m}-${day}T${h}:${min}`
+})
+const eventDateTimeIso = computed(() => {
+  if (!eventDate.value) return ''
+  return `${eventDate.value}T${eventTime.value || '23:59'}`
+})
+// Validation cross-field : si on a déjà tout, vérifier que fin > début
+const dateRangeError = computed(() => {
+  if (!eventDate.value) return ''
+  if (eventDate.value < todayIso.value) return 'La date de début doit être aujourd\'hui ou ultérieure.'
+  if (eventEndDate.value && eventEndDate.value < eventDate.value) return 'La date de fin doit être après la date de début.'
+  if (eventEndDate.value && eventEndDate.value === eventDate.value && eventTime.value && eventEndTime.value && eventEndTime.value <= eventTime.value) return 'L\'heure de fin doit être après l\'heure de début.'
+  return ''
+})
 const eventVenue = ref('')
 const eventCity = ref('')
 const eventAddress = ref('')
@@ -305,7 +340,7 @@ async function kitCopyLink() {
 
 function kitShareWhatsApp() {
   const msg = encodeURIComponent(
-    `🎟️ ${publishedEventTitle.value}\n\nJe vous invite à mon événement. Réservez votre billet ici :\n${publishedEventUrl.value}`
+    `${publishedEventTitle.value}\n\nJe vous invite à mon événement. Réservez votre billet ici :\n${publishedEventUrl.value}`
   )
   window.open(`https://wa.me/?text=${msg}`, '_blank')
 }
@@ -403,6 +438,12 @@ function addPdv() {
 function removePdv(i: number) { pdvList.value.splice(i, 1) }
 
 const saveOrPublish = async (publish: boolean) => {
+  // Garde-fou : pas de publication avec date passée ou range incohérente.
+  // (Le navigateur respecte `min` mais l'utilisateur peut taper au clavier.)
+  if (dateRangeError.value) {
+    notifyError(dateRangeError.value)
+    return
+  }
   const ref$ = publish ? submitting : saving
   ref$.value = true
   fieldErrors.value = {}
@@ -923,8 +964,9 @@ const finputClass = 'py-2.5 px-3.5 rounded-lg border-[1.5px] border-border-light
             <div class="flex flex-col gap-[7px]"><label class="text-[0.78rem] font-bold text-ink2 tracking-wide">Catégorie <span class="text-red-error ml-0.5">*</span></label><select :class="finputClass" v-model="selectedCategory" @change="onCategoryChange"><option value="">Choisir une catégorie</option><option v-for="c in categories" :key="c.value" :value="c.value">{{ c.label }}</option></select><input v-if="showCatCustom" :class="finputClass + ' mt-2'" placeholder="Précisez votre catégorie…" /></div>
             <div class="flex flex-col gap-[7px]"><label class="text-[0.78rem] font-bold text-ink2 tracking-wide">Langue principale</label><select :class="finputClass"><option>Français</option><option>Anglais</option><option>Wolof</option><option>Arabe</option></select></div>
           </div>
-          <div class="grid grid-cols-2 gap-5 mb-6 max-[900px]:grid-cols-1"><div class="flex flex-col gap-[7px]"><label class="text-[0.78rem] font-bold text-ink2 tracking-wide">Date de début <span class="text-red-error ml-0.5">*</span></label><input v-model="eventDate" type="date" :class="finputClass" /></div><div class="flex flex-col gap-[7px]"><label class="text-[0.78rem] font-bold text-ink2 tracking-wide">Heure de début <span class="text-red-error ml-0.5">*</span></label><input v-model="eventTime" type="time" :class="finputClass" /></div></div>
-                    <div class="grid grid-cols-2 gap-5 mb-6 max-[900px]:grid-cols-1"><div class="flex flex-col gap-[7px]"><label class="text-[0.78rem] font-bold text-ink2 tracking-wide">Date de fin</label><input v-model="eventEndDate" type="date" :class="finputClass" /></div><div class="flex flex-col gap-[7px]"><label class="text-[0.78rem] font-bold text-ink2 tracking-wide">Heure de fin</label><input v-model="eventEndTime" type="time" :class="finputClass" /></div></div>
+          <div class="grid grid-cols-2 gap-5 mb-6 max-[900px]:grid-cols-1"><div class="flex flex-col gap-[7px]"><label class="text-[0.78rem] font-bold text-ink2 tracking-wide">Date de début <span class="text-red-error ml-0.5">*</span></label><input v-model="eventDate" type="date" :min="todayIso" :class="finputClass" /></div><div class="flex flex-col gap-[7px]"><label class="text-[0.78rem] font-bold text-ink2 tracking-wide">Heure de début <span class="text-red-error ml-0.5">*</span></label><input v-model="eventTime" type="time" :class="finputClass" /></div></div>
+                    <div class="grid grid-cols-2 gap-5 mb-6 max-[900px]:grid-cols-1"><div class="flex flex-col gap-[7px]"><label class="text-[0.78rem] font-bold text-ink2 tracking-wide">Date de fin</label><input v-model="eventEndDate" type="date" :min="minEndDate" :class="finputClass" /></div><div class="flex flex-col gap-[7px]"><label class="text-[0.78rem] font-bold text-ink2 tracking-wide">Heure de fin</label><input v-model="eventEndTime" type="time" :class="finputClass" /></div></div>
+                    <div v-if="dateRangeError" class="text-xs text-red-error mb-4 -mt-3 flex items-center gap-1.5"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{{ dateRangeError }}</div>
           <div class="flex flex-col gap-[7px] mb-6"><label class="text-[0.78rem] font-bold text-ink2 tracking-wide">Type d'événement <span class="text-red-error ml-0.5">*</span></label><div class="flex gap-2.5 flex-wrap"><div v-for="t in ['presentiel','enligne','hybride']" :key="t" class="flex items-center gap-2 px-4 py-2.5 rounded-lg border-[1.5px] cursor-pointer transition-all bg-surface text-sm font-medium" :class="eventType===t?'border-orange-primary text-orange-primary':'border-border-light hover:border-border-medium'" @click="eventType=t"><div class="w-3.5 h-3.5 rounded-full border-2 shrink-0" :class="eventType===t?'border-orange-primary bg-orange-primary':'border-border-medium'"></div>{{ t==='presentiel'?'Présentiel':t==='enligne'?'En ligne':'Hybride' }}</div></div></div>
           <div v-if="eventType==='presentiel'||eventType==='hybride'">
             <div class="grid grid-cols-2 gap-5 mb-6 max-[900px]:grid-cols-1"><div class="flex flex-col gap-[7px]"><label class="text-[0.78rem] font-bold text-ink2 tracking-wide">Pays <span class="text-red-error ml-0.5">*</span></label><select v-model="eventCountry" :class="finputClass"><option value="" disabled>Sélectionnez un pays</option><option v-for="c in COUNTRY_OPTIONS" :key="c.code" :value="c.code">{{ c.label }}</option></select></div><div><UiBaseAutocomplete v-model="eventCity" label="Ville" :placeholder="eventCountry ? 'Commencez à taper une ville...' : 'Sélectionnez d\'abord un pays'" :suggestions="citySuggestions" :loading="cityLoading" :disabled="!eventCountry" required @search="onCitySearch" /></div></div>
@@ -957,7 +999,7 @@ const finputClass = 'py-2.5 px-3.5 rounded-lg border-[1.5px] border-border-light
                 <div><div class="text-[0.72rem] font-bold uppercase tracking-wide text-text-tertiary mb-1">Prix (FCFA)</div><input v-model.number="t.price" type="number" class="bg-transparent border-none outline-none font-serif text-[1.1rem] text-text-primary w-full placeholder:text-border-medium" placeholder="0" /></div>
                                 <div><div class="text-[0.72rem] font-bold uppercase tracking-wide text-text-tertiary mb-1">Capacité <span class="text-red-error">*</span></div><input v-model.number="t.capacity" type="number" class="bg-transparent border-none outline-none font-serif text-[1.1rem] text-text-primary w-full placeholder:text-border-medium" placeholder="ex : 500" /></div>
                 <button class="w-8 h-8 rounded-lg border border-border-light text-text-tertiary flex items-center justify-center hover:bg-red-dim hover:text-red-error hover:border-red-error transition-all mt-1" @click="removeTicket(i)"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
-                <div class="col-span-full grid grid-cols-3 gap-3 border-t border-border-light pt-3 mt-1 max-[900px]:grid-cols-1"><div><div class="text-[0.72rem] font-bold uppercase tracking-wide text-text-tertiary mb-1">Début ventes</div><input v-model="t.sale_start_date" type="datetime-local" class="bg-transparent border border-border-light rounded-lg outline-none text-[0.8rem] text-text-primary w-full px-2 py-1.5 focus:border-orange-primary" /></div><div><div class="text-[0.72rem] font-bold uppercase tracking-wide text-text-tertiary mb-1">Fin ventes</div><input v-model="t.sale_end_date" type="datetime-local" class="bg-transparent border border-border-light rounded-lg outline-none text-[0.8rem] text-text-primary w-full px-2 py-1.5 focus:border-orange-primary" /></div><div><div class="text-[0.72rem] font-bold uppercase tracking-wide text-text-tertiary mb-1">Max par commande</div><input v-model.number="t.max_per_order" type="number" class="bg-transparent border border-border-light rounded-lg outline-none text-[0.8rem] text-text-primary w-full px-2 py-1.5 focus:border-orange-primary" placeholder="Illimité" /></div></div>
+                <div class="col-span-full grid grid-cols-3 gap-3 border-t border-border-light pt-3 mt-1 max-[900px]:grid-cols-1"><div><div class="text-[0.72rem] font-bold uppercase tracking-wide text-text-tertiary mb-1">Début ventes</div><input v-model="t.sale_start_date" type="datetime-local" :min="nowDateTimeIso" :max="eventDateTimeIso || undefined" class="bg-transparent border border-border-light rounded-lg outline-none text-[0.8rem] text-text-primary w-full px-2 py-1.5 focus:border-orange-primary" /></div><div><div class="text-[0.72rem] font-bold uppercase tracking-wide text-text-tertiary mb-1">Fin ventes</div><input v-model="t.sale_end_date" type="datetime-local" :min="t.sale_start_date || nowDateTimeIso" :max="eventDateTimeIso || undefined" class="bg-transparent border border-border-light rounded-lg outline-none text-[0.8rem] text-text-primary w-full px-2 py-1.5 focus:border-orange-primary" /></div><div><div class="text-[0.72rem] font-bold uppercase tracking-wide text-text-tertiary mb-1">Max par commande</div><input v-model.number="t.max_per_order" type="number" min="1" class="bg-transparent border border-border-light rounded-lg outline-none text-[0.8rem] text-text-primary w-full px-2 py-1.5 focus:border-orange-primary" placeholder="Illimité" /></div></div>
               </div>
               <button class="flex items-center justify-center gap-2 p-3 rounded-xl border-[1.5px] border-dashed border-border-medium bg-transparent text-text-tertiary text-[0.85rem] font-semibold w-full hover:border-orange-primary hover:text-orange-primary hover:bg-orange-dim transition-all" @click="addTicket"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Ajouter un type de billet</button>
             </div>
@@ -988,7 +1030,7 @@ const finputClass = 'py-2.5 px-3.5 rounded-lg border-[1.5px] border-border-light
               <div v-for="(p,i) in programItems" :key="i" class="bg-surface border-[1.5px] border-border-light rounded-xl p-3.5 relative">
                 <div class="grid grid-cols-2 gap-2.5 mb-2">
                   <div><label class="text-[0.72rem] font-bold text-ink2 mb-1 block">Heure début *</label><input v-model="p.start_time" type="time" class="bg-transparent border border-border-light rounded-lg outline-none text-[0.85rem] text-text-primary w-full px-2.5 py-1.5 focus:border-orange-primary" /></div>
-                  <div><label class="text-[0.72rem] font-bold text-ink2 mb-1 block">Heure fin</label><input v-model="p.end_time" type="time" class="bg-transparent border border-border-light rounded-lg outline-none text-[0.85rem] text-text-primary w-full px-2.5 py-1.5 focus:border-orange-primary" /></div>
+                  <div><label class="text-[0.72rem] font-bold text-ink2 mb-1 block">Heure fin</label><input v-model="p.end_time" type="time" :min="p.start_time || undefined" class="bg-transparent border border-border-light rounded-lg outline-none text-[0.85rem] text-text-primary w-full px-2.5 py-1.5 focus:border-orange-primary" :class="p.end_time && p.start_time && p.end_time <= p.start_time ? 'border-red-error' : ''" /></div>
                 </div>
                 <input v-model="p.title" class="bg-transparent border-none outline-none text-[0.88rem] font-semibold text-text-primary w-[calc(100%-32px)] mb-1.5 placeholder:text-border-medium" placeholder="Titre de l'activité *" />
                 <input v-model="p.description" class="bg-transparent border-none outline-none text-[0.82rem] text-text-tertiary w-[calc(100%-32px)] mb-1.5 placeholder:text-border-medium" placeholder="Description courte…" />
@@ -1038,7 +1080,7 @@ const finputClass = 'py-2.5 px-3.5 rounded-lg border-[1.5px] border-border-light
 
         <div v-show="currentStep === 10">
           <div class="mb-9"><div class="text-[0.7rem] font-bold uppercase tracking-[0.12em] text-text-primary opacity-50 mb-2">Section optionnelle</div><h1 class="font-serif text-[1.8rem] mb-2">Codes de réduction</h1><p class="text-[0.9rem] text-text-tertiary leading-relaxed">Codes promo et réductions.</p></div>
-          <div class="bg-bg-primary border border-border-light rounded-2xl p-5 mb-5"><div class="text-[0.82rem] font-bold text-ink2 mb-4">Nouveau code de réduction</div><div class="grid grid-cols-2 gap-5 mb-5 max-[900px]:grid-cols-1"><div class="flex flex-col gap-[7px]"><label class="text-[0.78rem] font-bold text-ink2 tracking-wide">Code promo <span class="text-red-error ml-0.5">*</span></label><input v-model="promoCode" :class="finputClass + ' uppercase'" placeholder="Ex : EARLYBIRD2025" /></div><div class="flex flex-col gap-[7px]"><label class="text-[0.78rem] font-bold text-ink2 tracking-wide">Type de réduction <span class="text-red-error ml-0.5">*</span></label><select v-model="promoType" :class="finputClass"><option value="percentage">Pourcentage (%)</option><option value="fixed">Montant fixe (FCFA)</option><option value="free">Accès gratuit</option></select></div></div><div class="grid grid-cols-3 gap-5 mb-5 max-[900px]:grid-cols-1"><div class="flex flex-col gap-[7px]"><label class="text-[0.78rem] font-bold text-ink2 tracking-wide">Valeur <span class="text-red-error ml-0.5">*</span></label><input v-model.number="promoValue" type="number" :class="finputClass" placeholder="Ex : 20" /></div><div class="flex flex-col gap-[7px]"><label class="text-[0.78rem] font-bold text-ink2 tracking-wide">Utilisations max</label><input v-model.number="promoMaxUsage" type="number" :class="finputClass" placeholder="Illimité si vide" /></div><div class="flex flex-col gap-[7px]"><label class="text-[0.78rem] font-bold text-ink2 tracking-wide">Expiration</label><input v-model="promoExpiration" type="date" :class="finputClass" /></div></div><div class="grid grid-cols-2 gap-5 mb-5 max-[900px]:grid-cols-1"><div class="flex flex-col gap-[7px]"><label class="text-[0.78rem] font-bold text-ink2 tracking-wide">Montant min. de commande <span class="text-[0.72rem] font-medium text-text-tertiary ml-1">(optionnel)</span></label><input v-model.number="promoMinOrderAmount" type="number" :class="finputClass" placeholder="Ex : 5000" /></div><div class="flex flex-col gap-[7px]"><label class="text-[0.78rem] font-bold text-ink2 tracking-wide">Max par utilisateur <span class="text-[0.72rem] font-medium text-text-tertiary ml-1">(optionnel)</span></label><input v-model.number="promoMaxPerUser" type="number" :class="finputClass" placeholder="Ex : 1" /></div></div><button type="button" class="w-full py-[11px] rounded-[9px] bg-orange-primary text-white text-[0.85rem] font-bold border-none cursor-pointer hover:bg-orange-light" @click="addPromoCode">+ Ajouter ce code</button></div>
+          <div class="bg-bg-primary border border-border-light rounded-2xl p-5 mb-5"><div class="text-[0.82rem] font-bold text-ink2 mb-4">Nouveau code de réduction</div><div class="grid grid-cols-2 gap-5 mb-5 max-[900px]:grid-cols-1"><div class="flex flex-col gap-[7px]"><label class="text-[0.78rem] font-bold text-ink2 tracking-wide">Code promo <span class="text-red-error ml-0.5">*</span></label><input v-model="promoCode" :class="finputClass + ' uppercase'" placeholder="Ex : EARLYBIRD2025" /></div><div class="flex flex-col gap-[7px]"><label class="text-[0.78rem] font-bold text-ink2 tracking-wide">Type de réduction <span class="text-red-error ml-0.5">*</span></label><select v-model="promoType" :class="finputClass"><option value="percentage">Pourcentage (%)</option><option value="fixed">Montant fixe (FCFA)</option><option value="free">Accès gratuit</option></select></div></div><div class="grid grid-cols-3 gap-5 mb-5 max-[900px]:grid-cols-1"><div class="flex flex-col gap-[7px]"><label class="text-[0.78rem] font-bold text-ink2 tracking-wide">Valeur <span class="text-red-error ml-0.5">*</span></label><input v-model.number="promoValue" type="number" :class="finputClass" placeholder="Ex : 20" /></div><div class="flex flex-col gap-[7px]"><label class="text-[0.78rem] font-bold text-ink2 tracking-wide">Utilisations max</label><input v-model.number="promoMaxUsage" type="number" :class="finputClass" placeholder="Illimité si vide" /></div><div class="flex flex-col gap-[7px]"><label class="text-[0.78rem] font-bold text-ink2 tracking-wide">Expiration</label><input v-model="promoExpiration" type="date" :min="todayIso" :class="finputClass" /></div></div><div class="grid grid-cols-2 gap-5 mb-5 max-[900px]:grid-cols-1"><div class="flex flex-col gap-[7px]"><label class="text-[0.78rem] font-bold text-ink2 tracking-wide">Montant min. de commande <span class="text-[0.72rem] font-medium text-text-tertiary ml-1">(optionnel)</span></label><input v-model.number="promoMinOrderAmount" type="number" :class="finputClass" placeholder="Ex : 5000" /></div><div class="flex flex-col gap-[7px]"><label class="text-[0.78rem] font-bold text-ink2 tracking-wide">Max par utilisateur <span class="text-[0.72rem] font-medium text-text-tertiary ml-1">(optionnel)</span></label><input v-model.number="promoMaxPerUser" type="number" :class="finputClass" placeholder="Ex : 1" /></div></div><button type="button" class="w-full py-[11px] rounded-[9px] bg-orange-primary text-white text-[0.85rem] font-bold border-none cursor-pointer hover:bg-orange-light" @click="addPromoCode">+ Ajouter ce code</button></div>
                     <div v-if="promoCodes.length" class="mb-5"><div class="text-[0.82rem] font-bold text-ink2 mb-3">Codes ajoutés</div><div class="flex flex-col gap-2"><div v-for="(pc, i) in promoCodes" :key="i" class="flex items-center justify-between p-3 rounded-lg border border-border-light bg-surface"><div class="flex items-center gap-3"><span class="font-mono font-bold text-[0.85rem] text-orange-primary uppercase">{{ pc.code }}</span><span class="text-[0.78rem] text-text-tertiary">{{ pc.type === 'percentage' ? pc.value + '%' : pc.type === 'free' ? 'Gratuit' : pc.value + ' FCFA' }}</span><span v-if="pc.min_order_amount" class="text-[0.72rem] text-text-tertiary">Min: {{ pc.min_order_amount }} FCFA</span><span v-if="pc.max_per_user" class="text-[0.72rem] text-text-tertiary">Max/user: {{ pc.max_per_user }}</span></div><button class="w-7 h-7 rounded-md border border-border-light text-text-tertiary flex items-center justify-center hover:bg-red-dim hover:text-red-error hover:border-red-error transition-all" @click="removePromoCode(i)"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div></div></div>
           <div class="flex items-center justify-between py-7 mt-4 border-t border-border-light"><span class="text-[0.78rem] text-text-tertiary">Section optionnelle</span><div class="flex gap-2.5"><button class="px-[22px] py-2.5 rounded-full border-[1.5px] border-border-light bg-surface text-[0.85rem] font-semibold text-ink2" @click="goStep(9)">← Retour</button><button class="px-[26px] py-2.5 rounded-full bg-orange-primary text-white text-[0.85rem] font-bold border-none cursor-pointer hover:bg-orange-light" @click="goStep(11)">Suivant → Campagne Email</button></div></div>
         </div>
@@ -1119,7 +1161,7 @@ const finputClass = 'py-2.5 px-3.5 rounded-lg border-[1.5px] border-border-light
          Évite le toast → silence. Propose 3 actions de partage immédiates :
          WhatsApp (canal n°1 en Afrique de l'Ouest), copier le lien (Instagram bio
          ou diffusion), email (bases existantes). + bouton "Plus tard" qui mène à la liste. -->
-    <UiBaseModal :is-open="showPostPublishKit" title="Votre événement est en ligne 🎉" size="md" @close="kitGoToEvents">
+    <UiBaseModal :is-open="showPostPublishKit" title="Votre événement est en ligne" size="md" @close="kitGoToEvents">
       <div class="text-center mb-5">
         <div class="w-14 h-14 rounded-full bg-green-dim flex items-center justify-center mx-auto mb-3">
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--color-green-dark)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -1166,9 +1208,10 @@ const finputClass = 'py-2.5 px-3.5 rounded-lg border-[1.5px] border-border-light
           <NuxtLink
             :to="publishedEventUrl"
             target="_blank"
-            class="text-xs text-text-tertiary hover:text-orange-primary"
+            class="inline-flex items-center gap-1.5 text-xs text-text-tertiary hover:text-orange-primary"
           >
-            👁 Voir la page publique
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            Voir la page publique
           </NuxtLink>
           <button
             type="button"

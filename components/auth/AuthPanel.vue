@@ -11,7 +11,7 @@
         Vendez vos billets,<br /><em class="text-orange-light italic">gérez vos événements</em><br />en toute simplicité.
       </div>
       <div class="text-[0.84rem] text-white/55 leading-[1.65] max-w-[260px]">
-        La plateforme tout-en-un pour les organisateurs d'événements au Sénégal et en Afrique francophone.
+        La billetterie pensée pour les organisateurs au Sénégal et en Afrique francophone.
       </div>
       <div class="flex gap-6 mt-1">
         <div class="text-center">

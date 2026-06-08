@@ -5,7 +5,7 @@
         <div class="flex items-center gap-2.5 text-[1.1rem] font-bold text-white mb-3.5">
           <NuxtImg src="/logo.png" alt="BilletEvent" class="h-[80px] w-auto" :width="80" :height="80" loading="lazy" :placeholder="[20, 20]" />
         </div>
-        <p class="text-sm leading-[1.7] text-white/50 max-w-[260px]">La plateforme de billetterie en ligne simple et puissante pour créer, vendre et gérer vos événements.</p>
+        <p class="text-sm leading-[1.7] text-white/50 max-w-[260px]">Billetterie en ligne pour concerts, conférences, formations et soirées en Afrique francophone.</p>
         <div class="flex gap-3 mt-5">
           <a href="https://facebook.com/billetevent" target="_blank" rel="noopener noreferrer" aria-label="BilletEvent sur Facebook" class="w-8 h-8 rounded-lg bg-white/8 flex items-center justify-center text-white/50 hover:bg-white/15 hover:text-white transition-all duration-150">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
