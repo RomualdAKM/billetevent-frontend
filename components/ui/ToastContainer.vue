@@ -20,15 +20,16 @@ const colorMap: Record<Notification['type'], { bg: string; icon: string; bar: st
 
 <template>
   <Teleport to="body">
-    <!-- Desktop: top-right. Mobile: bottom + safe-area (loin du notch +
-         là où les yeux/pouces vont après une action). Animation aussi
-         différenciée selon le viewport. -->
+    <!-- Desktop: top-right SOUS la navbar (sticky top-0 h-16 z-[200]) — d'où
+         top-20 (80px = 64 navbar + 16 margin) + z-[210] pour passer devant
+         tout chrome éventuel.
+         Mobile: bottom + safe-area. -->
     <div
       role="status"
       aria-live="polite"
       aria-atomic="false"
-      class="fixed z-[100] flex flex-col gap-3 pointer-events-none
-             top-4 right-4 w-full max-w-sm
+      class="fixed z-[210] flex flex-col gap-3 pointer-events-none
+             top-20 right-4 w-full max-w-sm
              max-sm:top-auto max-sm:right-2 max-sm:left-2 max-sm:max-w-none
              max-sm:bottom-[calc(env(safe-area-inset-bottom)+1rem)]"
     >

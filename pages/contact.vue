@@ -101,8 +101,8 @@ async function handleSubmit() {
     </section>
 
     <section class="bg-white">
-      <div class="px-5 md:px-10 py-20 max-w-[1200px] mx-auto">
-        <div class="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-10">
+      <div class="px-5 md:px-10 py-20 max-w-[760px] mx-auto">
+        <div>
           <div>
             <h2 class="font-serif text-3xl md:text-4xl leading-tight text-text-primary mb-8">Écrivez-nous directement</h2>
             <form @submit.prevent="handleSubmit" class="flex flex-col gap-5">
@@ -165,49 +165,6 @@ async function handleSubmit() {
             </form>
           </div>
 
-          <div>
-            <div class="border border-border-light rounded-xl p-6">
-              <h3 class="font-serif text-xl text-text-primary mb-8">Nos coordonnées</h3>
-              <div class="flex flex-col gap-6">
-                <div class="flex items-start gap-4">
-                  <div class="text-orange-primary shrink-0">
-                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                  </div>
-                  <div>
-                    <div class="text-xs font-semibold text-text-primary mb-0.5">Adresse</div>
-                    <div class="text-sm text-text-secondary">Dakar, Sénégal</div>
-                  </div>
-                </div>
-                <div class="flex items-start gap-4">
-                  <div class="text-orange-primary shrink-0">
-                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.18 2 2 0 0 1 3.6 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 8.91a16 16 0 0 0 6 6l.77-.77a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                  </div>
-                  <div>
-                    <div class="text-xs font-semibold text-text-primary mb-0.5">Téléphone</div>
-                    <a href="tel:+221770000000" class="text-sm text-text-secondary hover:text-orange-primary transition-colors">+221 77 000 00 00</a>
-                  </div>
-                </div>
-                <div class="flex items-start gap-4">
-                  <div class="text-orange-primary shrink-0">
-                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22 6 12 13 2 6"/></svg>
-                  </div>
-                  <div>
-                    <div class="text-xs font-semibold text-text-primary mb-0.5">Email</div>
-                    <a href="mailto:contact@billetevent.com" class="text-sm text-text-secondary hover:text-orange-primary transition-colors">contact@billetevent.com</a>
-                  </div>
-                </div>
-                <div class="flex items-start gap-4">
-                  <div class="text-orange-primary shrink-0">
-                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                  </div>
-                  <div>
-                    <div class="text-xs font-semibold text-text-primary mb-0.5">Horaires</div>
-                    <div class="text-sm text-text-secondary">Lun - Ven : 9h - 18h</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </section>

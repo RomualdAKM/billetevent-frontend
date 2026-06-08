@@ -227,7 +227,7 @@ const resetFilters = () => {
         </div>
         <div class="relative w-full md:w-[320px]">
           <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-tertiary" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input v-model="search" type="text" placeholder="Rechercher un événement..." class="w-full pl-10 pr-4 py-2.5 border-[1.5px] border-border-light rounded-full font-sans text-sm text-text-primary bg-surface outline-none placeholder:text-text-tertiary focus:border-orange-primary transition-colors" />
+          <input v-model="search" type="text" placeholder="Rechercher un événement..." class="w-full pl-10 pr-4 py-2.5 border-[1.5px] border-border-light rounded-md font-sans text-sm text-text-primary bg-surface outline-none placeholder:text-text-tertiary focus:border-orange-primary transition-colors" />
         </div>
       </div>
 
@@ -237,7 +237,7 @@ const resetFilters = () => {
           v-for="preset in datePresets"
           :key="preset.value || 'all'"
           type="button"
-          class="px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-colors cursor-pointer"
+          class="px-3.5 py-1.5 rounded-md text-xs font-semibold border transition-colors cursor-pointer"
           :class="datePreset === preset.value ? 'bg-text-primary text-white border-text-primary' : 'bg-surface border-border-light text-text-secondary hover:border-text-primary hover:text-text-primary'"
           @click="datePreset = preset.value"
         >
@@ -251,7 +251,7 @@ const resetFilters = () => {
           v-for="cat in categories"
           :key="cat"
           type="button"
-          class="px-4 py-2 rounded-full text-xs font-semibold border transition-colors cursor-pointer"
+          class="px-4 py-2 rounded-md text-xs font-semibold border transition-colors cursor-pointer"
           :class="activeCategory === cat ? 'bg-orange-primary text-white border-orange-primary' : 'bg-surface border-border-light text-text-secondary hover:border-orange-primary hover:text-orange-primary'"
           @click="activeCategory = cat"
         >
@@ -303,7 +303,7 @@ const resetFilters = () => {
       <p class="text-sm text-text-tertiary mb-5">{{ resultCount }} événement{{ resultCount > 1 ? 's' : '' }} trouvé{{ resultCount > 1 ? 's' : '' }}</p>
 
       <div v-if="loading" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 pb-6">
-        <div v-for="n in 6" :key="n" class="bg-surface border border-border-light rounded-xl overflow-hidden animate-pulse">
+        <div v-for="n in 6" :key="n" class="bg-surface border border-border-light rounded-lg overflow-hidden animate-pulse">
           <div class="h-44 bg-gray-200" />
           <div class="p-5 space-y-3">
             <div class="h-4 bg-gray-200 rounded w-3/4" />

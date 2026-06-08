@@ -69,13 +69,13 @@ const followOrganizer = async () => {
 </script>
 
 <template>
-  <div class="bg-white rounded-xl border border-border-light overflow-hidden transition-all duration-200 hover:border-orange-primary cursor-pointer group">
+  <div class="bg-white rounded-lg border border-border-light overflow-hidden transition-all duration-200 hover:border-orange-primary cursor-pointer group">
     <div class="relative h-44 overflow-hidden">
       <NuxtImg v-if="image" :src="image" :alt="title" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" :placeholder="[20, 20]" />
       <div v-else :class="['w-full h-full bg-gradient-to-br', gradient]" />
-      <span v-if="category" class="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-text-primary text-xs font-bold px-2.5 py-1 rounded-full">{{ category }}</span>
-      <span v-if="eventType === 'enligne'" class="absolute bottom-3 left-3 text-xs font-medium px-2 py-0.5 rounded-full bg-blue-50 text-blue-600">En ligne</span>
-      <span v-else-if="eventType === 'hybride'" class="absolute bottom-3 left-3 text-xs font-medium px-2 py-0.5 rounded-full bg-purple-50 text-purple-600">Hybride</span>
+      <span v-if="category" class="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-text-primary text-xs font-bold px-2.5 py-1 rounded-md">{{ category }}</span>
+      <span v-if="eventType === 'enligne'" class="absolute bottom-3 left-3 text-xs font-medium px-2 py-0.5 rounded-md bg-blue-50 text-blue-600">En ligne</span>
+      <span v-else-if="eventType === 'hybride'" class="absolute bottom-3 left-3 text-xs font-medium px-2 py-0.5 rounded-md bg-purple-50 text-purple-600">Hybride</span>
       <button
         v-if="event?.id"
         class="absolute top-3 right-3 bg-white/80 backdrop-blur w-9 h-9 flex items-center justify-center rounded-full transition-colors duration-150 hover:bg-white cursor-pointer"

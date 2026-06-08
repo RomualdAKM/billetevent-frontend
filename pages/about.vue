@@ -28,17 +28,17 @@ const solutions = [
   {
     title: 'Une marketplace active 24/7',
     desc: 'Vendez vos billets en continu via notre marketplace multicanal : site web, WhatsApp. Vos événements sont accessibles partout, tout le temps.',
-    icon: 'globe',
+    image: '/about/1e.png',
   },
   {
     title: 'Des fonctionnalités complètes',
     desc: 'Gestion des stocks de billets, suivi des ventes en temps réel, promotions ciblées, invitations VIP et presse — tout est intégré dans une plateforme intuitive.',
-    icon: 'tools',
+    image: '/about/2e.png',
   },
   {
     title: 'Une expertise reconnue',
     desc: 'Des milliers d\'utilisateurs nous font déjà confiance. BilletEvent est la référence n°1 de la billetterie événementielle en Afrique de l\'Ouest.',
-    icon: 'trophy',
+    image: '/about/3e.png',
   },
 ]
 

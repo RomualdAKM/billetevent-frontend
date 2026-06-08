@@ -23,7 +23,7 @@ const sections = [
   },
   {
     title: '4. Tarification et commissions',
-    content: `BilletEvent applique une commission de 10% sur le montant de chaque billet vendu via la plateforme. Cette commission couvre les frais de traitement des paiements, l'hébergement de la page événement, les outils de gestion et le support technique.\n\nDes frais de service peuvent être appliqués à l'acheteur au moment du paiement. Ces frais sont clairement indiqués avant la validation de la commande et varient en fonction du moyen de paiement choisi.\n\nLa création d'événements gratuits sur inscription est proposée sans frais. Les organisateurs peuvent consulter le détail des commissions et frais depuis leur tableau de bord à tout moment.`
+    content: `BilletEvent applique une commission de 7% sur le montant de chaque billet vendu via la plateforme. Cette commission couvre les frais de traitement des paiements, l'hébergement de la page événement, les outils de gestion et le support technique.\n\nDes frais de service peuvent être appliqués à l'acheteur au moment du paiement. Ces frais sont clairement indiqués avant la validation de la commande et varient en fonction du moyen de paiement choisi.\n\nLa création d'événements gratuits sur inscription est proposée sans frais. Les organisateurs peuvent consulter le détail des commissions et frais depuis leur tableau de bord à tout moment.`
   },
   {
     title: '5. Moyens de paiement',

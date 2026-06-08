@@ -56,7 +56,7 @@ const partners: string[] = []
     <section>
       <div class="px-5 md:px-10 py-20 max-w-[1200px] mx-auto text-center">
         <div class="bg-bg-surface rounded-xl p-10 md:p-16 max-w-[700px] mx-auto border border-border-light">
-          <div class="text-4xl font-bold text-orange-primary mb-4">10%</div>
+          <div class="text-4xl font-bold text-orange-primary mb-4">7%</div>
           <div class="font-serif text-xl md:text-2xl text-text-primary mb-3">Commission uniquement sur les billets vendus</div>
           <p class="text-text-secondary text-base leading-relaxed">
             Vous ne payez que si vous vendez. Pas d'abonnement, pas de frais cachés. Créez votre événement gratuitement et ne payez que sur le succès.
